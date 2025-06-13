@@ -69,3 +69,19 @@ export interface UserStats {
   inactive: number;
   byRole: Record<string, number>;
 }
+
+export interface ApiError {
+  message: string;
+  statusCode?: number;
+  error?: string;
+}
+
+export interface MutationError {
+  response?: {
+    data?: ApiError;
+  };
+  message?: string;
+}
+
+export type UserRole = "admin" | "user" | "moderator";
+export type TodoPriority = "low" | "medium" | "high";

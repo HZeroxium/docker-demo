@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { Box, MenuItem, Alert } from "@mui/material";
 import { useCreateUser, useUpdateUser } from "@/hooks/useApi";
-import { User, CreateUserInput, UpdateUserInput } from "@/types";
+import {
+  User,
+  CreateUserInput,
+  UpdateUserInput,
+  UserRole,
+  MutationError,
+} from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -63,8 +69,11 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
       }
 
       handleClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "An error occurred");
+    } catch (err) {
+      const error = err as MutationError;
+      setError(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   };
 
@@ -148,7 +157,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
           select
           value={formData.role}
           onChange={(e) =>
-            setFormData({ ...formData, role: e.target.value as any })
+            setFormData({ ...formData, role: e.target.value as UserRole })
           }
           fullWidth
         >

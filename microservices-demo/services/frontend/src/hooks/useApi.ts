@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userApi, todoApi, healthApi } from "@/lib/api";
 import {
-  User,
-  Todo,
   CreateUserInput,
   UpdateUserInput,
   CreateTodoInput,

@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { Box, MenuItem, Alert } from "@mui/material";
 import { useCreateTodo, useUpdateTodo, useUsers } from "@/hooks/useApi";
-import { Todo, CreateTodoInput, UpdateTodoInput } from "@/types";
+import {
+  Todo,
+  CreateTodoInput,
+  UpdateTodoInput,
+  TodoPriority,
+  MutationError,
+} from "@/types";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -73,8 +79,11 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
       }
 
       handleClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "An error occurred");
+    } catch (err) {
+      const error = err as MutationError;
+      setError(
+        error.response?.data?.message || error.message || "An error occurred"
+      );
     }
   };
 
@@ -147,7 +156,10 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
           select
           value={formData.priority}
           onChange={(e) =>
-            setFormData({ ...formData, priority: e.target.value as any })
+            setFormData({
+              ...formData,
+              priority: e.target.value as TodoPriority,
+            })
           }
           fullWidth
         >

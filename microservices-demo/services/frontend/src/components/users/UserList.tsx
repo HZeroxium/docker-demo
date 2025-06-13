@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import {
   Box,
-  Typography,
-  IconButton,
   Chip,
   TextField,
   InputAdornment,
@@ -14,6 +12,7 @@ import {
   GridColDef,
   GridActionsCellItem,
   GridRowParams,
+  GridPaginationModel,
 } from "@mui/x-data-grid";
 import {
   Edit as EditIcon,
@@ -36,11 +35,17 @@ export const UserList: React.FC<UserListProps> = ({
   onCreateUser,
   onEditUser,
 }) => {
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
   const [search, setSearch] = useState("");
 
-  const { data, isLoading, error } = useUsers(page + 1, pageSize, search);
+  const { data, isLoading, error } = useUsers(
+    paginationModel.page + 1,
+    paginationModel.pageSize,
+    search
+  );
   const deleteUserMutation = useDeleteUser();
 
   const handleDelete = async (id: string) => {
@@ -167,14 +172,14 @@ export const UserList: React.FC<UserListProps> = ({
           columns={columns}
           loading={isLoading}
           rowCount={data?.total || 0}
-          page={page}
-          pageSize={pageSize}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           paginationMode="server"
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 25, 50]}
           disableRowSelectionOnClick
-          loadingOverlay={CircularProgress}
+          slots={{
+            loadingOverlay: () => <CircularProgress />,
+          }}
         />
       </Box>
     </Card>

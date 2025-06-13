@@ -3,8 +3,6 @@ import {
   Box,
   Typography,
   Chip,
-  TextField,
-  InputAdornment,
   Alert,
   CircularProgress,
   Checkbox,
@@ -14,11 +12,11 @@ import {
   GridColDef,
   GridActionsCellItem,
   GridRowParams,
+  GridPaginationModel,
 } from "@mui/x-data-grid";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Search as SearchIcon,
   Add as AddIcon,
 } from "@mui/icons-material";
 import { useTodos, useDeleteTodo, useToggleTodo } from "@/hooks/useApi";
@@ -36,10 +34,15 @@ export const TodoList: React.FC<TodoListProps> = ({
   onCreateTodo,
   onEditTodo,
 }) => {
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+    page: 0,
+    pageSize: 10,
+  });
 
-  const { data, isLoading, error } = useTodos(page + 1, pageSize);
+  const { data, isLoading, error } = useTodos(
+    paginationModel.page + 1,
+    paginationModel.pageSize
+  );
   const deleteTodoMutation = useDeleteTodo();
   const toggleTodoMutation = useToggleTodo();
 
@@ -180,14 +183,25 @@ export const TodoList: React.FC<TodoListProps> = ({
           columns={columns}
           loading={isLoading}
           rowCount={data?.total || 0}
-          page={page}
-          pageSize={pageSize}
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
           paginationMode="server"
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 25, 50]}
           disableRowSelectionOnClick
-          loadingOverlay={CircularProgress}
+          slots={{
+            loadingOverlay: () => (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  height: "100%",
+                }}
+              >
+                <CircularProgress />
+              </div>
+            ),
+          }}
         />
       </Box>
     </Card>

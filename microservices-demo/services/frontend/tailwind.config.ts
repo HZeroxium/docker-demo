@@ -15,9 +15,9 @@ const config: Config = {
     },
   },
   plugins: [],
-  corePlugins: {
-    // Disable Tailwind's preflight to avoid conflicts with MUI
-    preflight: false,
-  },
+  // corePlugins: {
+  //   // Disable Tailwind's preflight to avoid conflicts with MUI
+  //   preflight: false,
+  // },
 };
 export default config;

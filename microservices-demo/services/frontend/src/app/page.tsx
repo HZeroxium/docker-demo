@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Grid, Typography, Alert, Chip, Paper } from "@mui/material";
+import { Box, Typography, Chip, Paper } from "@mui/material";
+import Grid from "@mui/material/Grid";
 import {
   People as PeopleIcon,
-  Assignment as AssignmentIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
 } from "@mui/icons-material";
@@ -23,7 +23,7 @@ export default function Dashboard() {
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [editingTodo, setEditingTodo] = useState<Todo | undefined>();
 
-  const { data: userStats, isLoading: statsLoading } = useUserStats();
+  const { data: userStats } = useUserStats();
   const { data: healthData } = useHealthCheck();
 
   const handleCreateUser = () => {
@@ -70,8 +70,8 @@ export default function Dashboard() {
       </Box>
 
       {/* Health Status */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
               Service Health Status
@@ -103,8 +103,8 @@ export default function Dashboard() {
       </Grid>
 
       {/* Statistics */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Total Users"
             value={userStats?.total || 0}
@@ -113,7 +113,7 @@ export default function Dashboard() {
             icon={<PeopleIcon />}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Active Users"
             value={userStats?.active || 0}
@@ -122,7 +122,7 @@ export default function Dashboard() {
             icon={<CheckCircleIcon />}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Inactive Users"
             value={userStats?.inactive || 0}
@@ -131,7 +131,7 @@ export default function Dashboard() {
             icon={<ErrorIcon />}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Admin Users"
             value={userStats?.byRole?.admin || 0}
@@ -143,8 +143,8 @@ export default function Dashboard() {
       </Grid>
 
       {/* User Management */}
-      <Grid container spacing={3} mb={4}>
-        <Grid item xs={12}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid size={{ xs: 12 }}>
           <UserList
             onCreateUser={handleCreateUser}
             onEditUser={handleEditUser}
@@ -154,7 +154,7 @@ export default function Dashboard() {
 
       {/* Todo Management */}
       <Grid container spacing={3}>
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <TodoList
             onCreateTodo={handleCreateTodo}
             onEditTodo={handleEditTodo}
