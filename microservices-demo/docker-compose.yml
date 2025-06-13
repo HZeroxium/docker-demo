@@ -1,0 +1,203 @@
+version: "3.8"
+
+networks:
+  microservices:
+    driver: bridge
+
+services:
+  # MongoDB for User Service
+  user-mongo:
+    image: mongo:latest
+    container_name: user-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: user_db
+    volumes:
+      - user_mongo_data:/data/db
+      - ./mongo/user-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks: [microservices]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/user_db --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB for Todo Service
+  todo-mongo:
+    image: mongo:latest
+    container_name: todo-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: todos
+    volumes:
+      - todo_mongo_data:/data/db
+      - ./mongo/todo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    networks: [microservices]
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/todos --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    restart: unless-stopped
+    networks: [microservices]
+    ports:
+      - "5672:5672" # AMQP protocol
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Kong API Gateway
+  kong:
+    image: kong:latest
+    container_name: kong-gateway
+    restart: unless-stopped
+    networks: [microservices]
+    ports:
+      - "8000:8000" # Proxy
+      - "8001:8001" # Admin API
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PROXY_LISTEN: "0.0.0.0:8000"
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_LOG_LEVEL: info
+    volumes:
+      - ./kong/kong.yml:/etc/kong/kong.yml:ro
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # User Service (NestJS + TypeScript)
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    ports:
+      - "3001:3001" # HTTP & GraphQL
+      - "50051:50051" # gRPC
+    environment:
+      - MONGODB_URL=mongodb://user-mongo:27017/user_db
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - NODE_ENV=production
+    depends_on:
+      user-mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [microservices]
+
+  # Todo Service (FastAPI + Python)
+  todo-service:
+    build:
+      context: ./services/todo-service
+      dockerfile: Dockerfile
+    container_name: todo-service
+    restart: unless-stopped
+    ports:
+      - "8001:8000" # HTTP & GraphQL (different from Kong admin)
+      - "50052:50052" # gRPC
+    environment:
+      - MONGODB_URL=mongodb://todo-mongo:27017
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - PYTHONPATH=/app
+    depends_on:
+      todo-mongo:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [microservices]
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./services/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_GATEWAY_URL=http://kong:8000
+    depends_on:
+      - kong
+      - user-service
+      - todo-service
+    networks: [microservices]
+
+  # Observability Stack
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks: [microservices]
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks: [microservices]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks: [microservices]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000" # Different port to avoid conflict
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks: [microservices]
+
+  zipkin:
+    image: openzipkin/zipkin:2.24
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks: [microservices]
+
+volumes:
+  user_mongo_data:
+  todo_mongo_data:
+  rabbitmq_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:

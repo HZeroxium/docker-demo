@@ -1,0 +1,15 @@
+_format_version: "3.0"
+services:
+  - name: user-service
+    url: http://user-service:3001
+    routes:
+      - name: user-rest
+        paths:
+          - /users
+
+  - name: todo-service
+    url: http://todo-service:8000
+    routes:
+      - name: todo-rest
+        paths:
+          - /todos

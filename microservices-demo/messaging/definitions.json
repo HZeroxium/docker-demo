@@ -1,0 +1,28 @@
+{
+  "vhosts": [{ "name": "/" }],
+  "users": [
+    { "name": "demo", "password_hash": "Zm9vYmFy", "tags": "administrator" }
+  ],
+  "permissions": [
+    {
+      "user": "demo",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    { "name": "todo_exchange", "vhost": "/", "type": "topic", "durable": true }
+  ],
+  "queues": [{ "name": "todo_created_queue", "vhost": "/", "durable": true }],
+  "bindings": [
+    {
+      "source": "todo_exchange",
+      "vhost": "/",
+      "destination": "todo_created_queue",
+      "destination_type": "queue",
+      "routing_key": "todo.created"
+    }
+  ]
+}
