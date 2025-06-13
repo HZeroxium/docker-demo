@@ -111,7 +111,7 @@ services:
     container_name: todo-service
     restart: unless-stopped
     ports:
-      - "8001:8000" # HTTP & GraphQL (different from Kong admin)
+      - "8002:8000" # Changed from 8001:8000 to avoid conflict with Kong admin
       - "50052:50052" # gRPC
     environment:
       - MONGODB_URL=mongodb://todo-mongo:27017
@@ -180,7 +180,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3001:3000" # Different port to avoid conflict
+      - "3002:3000" # Changed from 3001:3000 to avoid conflict with user-service
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:

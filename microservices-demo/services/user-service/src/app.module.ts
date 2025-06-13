@@ -18,6 +18,9 @@ import { join } from 'path';
       process.env.MONGODB_URL || 'mongodb://user-mongo:27017/user_db',
       {
         connectionName: 'default',
+        retryAttempts: 5,
+        retryDelay: 1000,
+        bufferCommands: false,
       },
     ),
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -36,6 +39,7 @@ import { join } from 'path';
         },
       ],
       uri: process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672',
+      connectionInitOptions: { wait: false },
     }),
     UsersModule,
   ],

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -18,31 +19,43 @@ import { RabbitRPC } from '@golevelup/nestjs-rabbitmq';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     const { email, password, name, role } = createUserDto;
 
-    // Check if user already exists
-    const existingUser = await this.userModel.findOne({ email });
-    if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+    try {
+      // Check if user already exists
+      const existingUser = await this.userModel.findOne({
+        email: email.toLowerCase(),
+      });
+      if (existingUser) {
+        throw new ConflictException('User with this email already exists');
+      }
+
+      // Hash password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Create user
+      const user = new this.userModel({
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        name,
+        role: role || UserRole.USER,
+        isActive: true,
+      });
+
+      const savedUser = await user.save();
+      this.logger.log(`User created successfully: ${savedUser.email}`);
+
+      return savedUser;
+    } catch (error) {
+      this.logger.error(`Failed to create user: ${error.message}`, error.stack);
+      throw error;
     }
-
-    // Hash password
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-    // Create user
-    const user = new this.userModel({
-      email,
-      password: hashedPassword,
-      name,
-      role: role || UserRole.USER,
-      isActive: true,
-    });
-
-    return await user.save();
   }
 
   async findUserById(id: string): Promise<User> {
@@ -54,11 +67,18 @@ export class UsersService {
   }
 
   async findUserByEmail(email: string): Promise<User> {
-    const user = await this.userModel.findOne({ email }).exec();
-    if (!user) {
-      throw new NotFoundException('User not found');
+    try {
+      const user = await this.userModel
+        .findOne({ email: email.toLowerCase() })
+        .exec();
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user;
+    } catch (error) {
+      this.logger.error(`Failed to find user by email: ${error.message}`);
+      throw error;
     }
-    return user;
   }
 
   async findUsers(
@@ -185,7 +205,11 @@ export class UsersService {
     queue: 'user_created_queue',
   })
   async handleUserCreated(msg: Record<string, any>) {
-    // consume events from other services if needed
-    console.log('Received user.created:', msg);
+    try {
+      this.logger.log('Received user.created event:', JSON.stringify(msg));
+      // Process the event here
+    } catch (error) {
+      this.logger.error('Failed to handle user.created event:', error);
+    }
   }
 }

@@ -63,9 +63,21 @@ export class UsersResolver {
   async createUser(
     @Args('createUserInput') createUserDto: CreateUserDto,
   ): Promise<User> {
-    const user = this.usersService.createUser(createUserDto);
-    // publish event
-    await this.rabbitMQService.publish('user_exchange', 'user.created', user);
+    const user = await this.usersService.createUser(createUserDto);
+
+    // Publish event asynchronously without blocking response
+    this.rabbitMQService
+      .publish('user_exchange', 'user.created', {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        timestamp: new Date().toISOString(),
+      })
+      .catch((error) => {
+        console.error('Failed to publish user.created event:', error);
+      });
+
     return user;
   }
 
