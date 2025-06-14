@@ -23,8 +23,14 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 30s
 
-  - job_name: 'kong'
+  - job_name: 'kong-gateway'
     static_configs:
-      - targets: ['kong:8001']
+      - targets: ['kong-gateway:8001']
     metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15672']
+    metrics_path: '/api/metrics'
     scrape_interval: 30s

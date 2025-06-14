@@ -59,6 +59,7 @@ A comprehensive NestJS microservice implementing user management with multiple c
 
 - `GET /` - Service health check
 - `GET /health` - Detailed health status
+- `GET /metrics` - Prometheus metrics endpoint
 - `POST /users` - Create user
 - `GET /users` - Get users with pagination and filtering
 - `GET /users/:id` - Get user by ID

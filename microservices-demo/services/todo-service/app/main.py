@@ -2,7 +2,7 @@ import uvicorn
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -10,10 +10,17 @@ from bson import ObjectId
 from datetime import datetime
 from .health import router as health_router
 from .database import connect_to_mongo, close_mongo_connection, get_collection
+from .observability import (
+    setup_logging,
+    get_logger,
+    log_request,
+    RequestTimer,
+    get_metrics,
+)
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Setup structured logging
+setup_logging()
+logger = get_logger(__name__)
 
 
 # Pydantic models for REST API
@@ -84,8 +91,9 @@ async def lifespan(app: FastAPI):
 
     try:
         await connect_to_mongo()
+        logger.info("Connected to MongoDB successfully")
     except Exception as e:
-        logger.error(f"Failed to connect to MongoDB: {e}")
+        logger.error("Failed to connect to MongoDB", error=str(e))
 
     if publisher:
         try:
@@ -389,6 +397,31 @@ async def health_check_api():
                 "error": str(e),
             },
         )
+
+
+# Add request timing middleware
+@app.middleware("http")
+async def add_request_timing(request: Request, call_next):
+    timer = RequestTimer()
+    response = await call_next(request)
+    duration = timer.elapsed()
+
+    # Log request with metrics
+    log_request(
+        method=request.method,
+        endpoint=str(request.url.path),
+        status_code=response.status_code,
+        duration=duration,
+    )
+
+    return response
+
+
+# Add metrics endpoint
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return get_metrics()
 
 
 if __name__ == "__main__":

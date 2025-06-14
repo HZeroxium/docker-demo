@@ -10,9 +10,28 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
   try {
-    // Create HTTP application
+    // Create HTTP application with structured logging
     const app = await NestFactory.create(AppModule, {
       logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+      bufferLogs: false,
+    });
+
+    // Add request logging middleware
+    app.use((req, res, next) => {
+      const start = Date.now();
+      res.on('finish', () => {
+        const duration = Date.now() - start;
+        logger.log({
+          message: 'HTTP Request',
+          method: req.method,
+          url: req.url,
+          status: res.statusCode,
+          duration,
+          userAgent: req.get('User-Agent'),
+          ip: req.ip,
+        });
+      });
+      next();
     });
 
     // Enable CORS
@@ -61,6 +80,7 @@ async function bootstrap() {
             maxReceiveMessageLength: 1024 * 1024 * 4, // 4MB
             maxSendMessageLength: 1024 * 1024 * 4, // 4MB
           },
+          logger: ['log', 'error', 'warn'],
         },
       );
 
@@ -68,6 +88,11 @@ async function bootstrap() {
       logger.log('⚡ gRPC Server: localhost:50051');
     } catch (grpcError) {
       logger.warn('gRPC service failed to start:', grpcError.message);
+      logger.error({
+        message: 'gRPC startup error',
+        error: grpcError.message,
+        stack: grpcError.stack,
+      });
     }
 
     // Create and start RabbitMQ microservice
@@ -99,6 +124,11 @@ async function bootstrap() {
     logger.log('🚀 User Service started successfully!');
   } catch (error) {
     logger.error('❌ Error starting application:', error);
+    logger.error({
+      message: 'Application startup failed',
+      error: error.message,
+      stack: error.stack,
+    });
     process.exit(1);
   }
 }

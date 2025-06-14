@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   microservices:
     driver: bridge
@@ -157,29 +155,101 @@ services:
 
   # Observability Stack
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.7
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enrollment.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - cluster.name=microservices-cluster
+      - node.name=elasticsearch-node
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
     ports:
       - "9200:9200"
+      - "9300:9300"
     networks: [microservices]
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.17.7
+    container_name: logstash
+    ports:
+      - "5044:5044" # Beats input
+      - "5000:5000" # TCP input
+      - "9600:9600" # HTTP API
+    environment:
+      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+      - "XPACK_MONITORING_ENABLED=false"
+    volumes:
+      - ./observability/elastic/pipeline:/usr/share/logstash/pipeline:ro
+      - ./observability/elastic/config:/usr/share/logstash/config:ro
+      - ./observability/elastic/templates:/usr/share/logstash/templates:ro
+      - logstash_data:/usr/share/logstash/data
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks: [microservices]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9600/_node/stats || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.17.7
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./observability/elastic/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - filebeat_data:/usr/share/filebeat/data
+    environment:
+      - ELASTICSEARCH_HOST=elasticsearch:9200
+      - LOGSTASH_HOST=logstash:5044
+    depends_on:
+      logstash:
+        condition: service_healthy
+    networks: [microservices]
+    command: ["--strict.perms=false"]
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:8.11.0
+    image: docker.elastic.co/kibana/kibana:8.17.7
     container_name: kibana
     ports:
       - "5601:5601"
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks: [microservices]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
+  # Add Prometheus
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -188,25 +258,72 @@ services:
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.console.libraries=/etc/prometheus/console_libraries"
+      - "--web.console.templates=/etc/prometheus/consoles"
+      - "--storage.tsdb.retention.time=200h"
+      - "--web.enable-lifecycle"
     networks: [microservices]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9090/",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
+  # Add Grafana
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3002:3000" # Changed from 3001:3000 to avoid conflict with user-service
+      - "3002:3000"
     environment:
+      - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
     networks: [microservices]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
+  # Add Zipkin
   zipkin:
-    image: openzipkin/zipkin:2.24
+    image: openzipkin/zipkin:latest
     container_name: zipkin
     ports:
       - "9411:9411"
+    environment:
+      - STORAGE_TYPE=mem
     networks: [microservices]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9411/health",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   user_mongo_data:
@@ -215,3 +332,5 @@ volumes:
   elasticsearch_data:
   prometheus_data:
   grafana_data:
+  logstash_data:
+  filebeat_data:
