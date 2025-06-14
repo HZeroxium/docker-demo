@@ -44,6 +44,10 @@ def generate_grpc_files():
 
         # Fix the import in the generated grpc file
         fix_grpc_imports(output_dir)
+
+        # Clean up old root-level proto file if it exists
+        cleanup_old_files(current_dir)
+
         return True
 
     except subprocess.CalledProcessError as e:
@@ -77,6 +81,17 @@ def fix_grpc_imports(output_dir):
             logger.info("✅ Fixed import statements in generated gRPC files")
         except Exception as e:
             logger.error(f"Failed to fix import statements: {e}")
+
+
+def cleanup_old_files(current_dir):
+    """Remove old proto file at root level"""
+    old_proto = os.path.join(current_dir, "todo.proto")
+    if os.path.exists(old_proto):
+        try:
+            os.remove(old_proto)
+            logger.info("✅ Cleaned up old proto file at root level")
+        except Exception as e:
+            logger.warning(f"Could not remove old proto file: {e}")
 
 
 if __name__ == "__main__":

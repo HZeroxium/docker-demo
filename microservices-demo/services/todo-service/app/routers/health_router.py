@@ -1,22 +1,18 @@
+# app/routers/health_router.py
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from .database import database
 from datetime import datetime
-import logging
+from ..core.health import HealthResponse
+from ..database import database
+from ..core.observability import get_logger
 
-logger = logging.getLogger(__name__)
-router = APIRouter()
-
-
-class HealthResponse(BaseModel):
-    status: str
-    database: str
-    message: str = "Service is healthy"
+logger = get_logger(__name__)
+router = APIRouter(tags=["health"])
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get("/todos/health", response_model=HealthResponse)
 async def health_check():
-    """Basic health check endpoint"""
+    """Comprehensive health check endpoint"""
     try:
         # Check database connection
         if database.client:
@@ -27,17 +23,21 @@ async def health_check():
 
         return HealthResponse(
             status="healthy",
+            service="todo-service",
+            timestamp=datetime.utcnow().isoformat(),
             database=db_status,
         )
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(
             status_code=503,
-            detail={
-                "status": "unhealthy",
-                "database": "error",
-                "message": str(e),
-            },
+            detail=HealthResponse(
+                status="unhealthy",
+                service="todo-service",
+                timestamp=datetime.utcnow().isoformat(),
+                database="error",
+                error=str(e),
+            ),
         )
 
 
