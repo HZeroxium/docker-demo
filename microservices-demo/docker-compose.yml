@@ -74,8 +74,13 @@ services:
       KONG_PROXY_LISTEN: "0.0.0.0:8000"
       KONG_ADMIN_LISTEN: "0.0.0.0:8001"
       KONG_LOG_LEVEL: info
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
     volumes:
       - ./kong/kong.yml:/etc/kong/kong.yml:ro
+    depends_on:
+      - user-service
+      - todo-service
     healthcheck:
       test: ["CMD", "kong", "health"]
       interval: 10s
@@ -112,7 +117,7 @@ services:
     container_name: todo-service
     restart: unless-stopped
     ports:
-      - "8002:8000" # Fixed port mapping back to 8002:8000 for consistency
+      - "8002:8000" # Changed to 8002 to avoid conflict with Kong Admin API (8001)
       - "50052:50052" # gRPC
     environment:
       - MONGODB_URL=mongodb://todo-mongo:27017
@@ -141,7 +146,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_GATEWAY_URL=http://kong:8000
+      - NEXT_PUBLIC_API_GATEWAY_URL=http://localhost:8000
+      - NEXT_PUBLIC_TODO_SERVICE_URL=http://localhost:8002
+      - NEXT_PUBLIC_USER_SERVICE_URL=http://localhost:3001
     depends_on:
       - kong
       - user-service

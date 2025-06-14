@@ -121,14 +121,14 @@ export const TodoList: React.FC<TodoListProps> = ({
       ),
     },
     {
-      field: "dueDate",
+      field: "due_date", // Changed from dueDate to due_date
       headerName: "Due Date",
       width: 180,
       renderCell: (params) =>
         params.value ? formatDate(params.value) : "No due date",
     },
     {
-      field: "createdAt",
+      field: "created_at", // Changed from createdAt to created_at
       headerName: "Created",
       width: 180,
       renderCell: (params) => formatDate(params.value),

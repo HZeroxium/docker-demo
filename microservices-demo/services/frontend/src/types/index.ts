@@ -13,11 +13,11 @@ export interface Todo {
   title: string;
   description?: string;
   completed: boolean;
-  userId: string;
+  user_id: string; // Changed from userId to user_id
   priority: "low" | "medium" | "high";
-  dueDate?: string;
-  createdAt: string;
-  updatedAt: string;
+  due_date?: string; // Changed from dueDate to due_date
+  created_at: string; // Changed from createdAt to created_at
+  updated_at: string; // Changed from updatedAt to updated_at
 }
 
 export interface CreateUserInput {
@@ -38,8 +38,8 @@ export interface CreateTodoInput {
   title: string;
   description?: string;
   priority?: "low" | "medium" | "high";
-  dueDate?: string;
-  userId: string;
+  due_date?: string; // Changed from dueDate to due_date
+  user_id: string; // Changed from userId to user_id
 }
 
 export interface UpdateTodoInput {
@@ -47,7 +47,7 @@ export interface UpdateTodoInput {
   description?: string;
   completed?: boolean;
   priority?: "low" | "medium" | "high";
-  dueDate?: string;
+  due_date?: string; // Changed from dueDate to due_date
 }
 
 export interface ApiResponse<T> {

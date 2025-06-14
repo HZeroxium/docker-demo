@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Box, Typography, Chip, Paper } from "@mui/material";
+import { Box, Typography, Chip, Paper, Alert, Button } from "@mui/material";
 import Grid from "@mui/material/Grid";
 import {
   People as PeopleIcon,
@@ -23,8 +23,19 @@ export default function Dashboard() {
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [editingTodo, setEditingTodo] = useState<Todo | undefined>();
 
-  const { data: userStats } = useUserStats();
-  const { data: healthData } = useHealthCheck();
+  const {
+    data: userStats,
+    isLoading: statsLoading,
+    error: statsError,
+    refetch: refetchStats,
+  } = useUserStats();
+  const { data: healthData, refetch: refetchHealth } = useHealthCheck();
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log("Dashboard - userStats:", userStats);
+    console.log("Dashboard - healthData:", healthData);
+  }, [userStats, healthData]);
 
   const handleCreateUser = () => {
     setEditingUser(undefined);
@@ -56,6 +67,16 @@ export default function Dashboard() {
     setEditingTodo(undefined);
   };
 
+  // Safe access to health data with fallbacks
+  const userServiceHealth = healthData?.userService || {
+    status: "unknown",
+    service: "user-service",
+  };
+  const todoServiceHealth = healthData?.todoService || {
+    status: "unknown",
+    service: "todo-service",
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       {/* Header */}
@@ -73,28 +94,48 @@ export default function Dashboard() {
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Service Health Status
-            </Typography>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={2}
+            >
+              <Typography variant="h6">Service Health Status</Typography>
+              <Button size="small" onClick={() => refetchHealth()}>
+                Refresh
+              </Button>
+            </Box>
             <Box display="flex" gap={2} flexWrap="wrap">
               <Chip
                 icon={
-                  healthData?.userService ? <CheckCircleIcon /> : <ErrorIcon />
+                  userServiceHealth?.status === "healthy" ? (
+                    <CheckCircleIcon />
+                  ) : (
+                    <ErrorIcon />
+                  )
                 }
                 label={`User Service: ${
-                  healthData?.userService?.status || "Disconnected"
+                  userServiceHealth?.status || "Disconnected"
                 }`}
-                color={healthData?.userService ? "success" : "error"}
+                color={
+                  userServiceHealth?.status === "healthy" ? "success" : "error"
+                }
                 variant="outlined"
               />
               <Chip
                 icon={
-                  healthData?.todoService ? <CheckCircleIcon /> : <ErrorIcon />
+                  todoServiceHealth?.status === "healthy" ? (
+                    <CheckCircleIcon />
+                  ) : (
+                    <ErrorIcon />
+                  )
                 }
                 label={`Todo Service: ${
-                  healthData?.todoService?.status || "Disconnected"
+                  todoServiceHealth?.status || "Disconnected"
                 }`}
-                color={healthData?.todoService ? "success" : "error"}
+                color={
+                  todoServiceHealth?.status === "healthy" ? "success" : "error"
+                }
                 variant="outlined"
               />
             </Box>
@@ -107,7 +148,7 @@ export default function Dashboard() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Total Users"
-            value={userStats?.total || 0}
+            value={statsLoading ? "..." : userStats?.total || 0}
             subtitle="Registered users"
             color="primary"
             icon={<PeopleIcon />}
@@ -116,7 +157,7 @@ export default function Dashboard() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Active Users"
-            value={userStats?.active || 0}
+            value={statsLoading ? "..." : userStats?.active || 0}
             subtitle="Currently active"
             color="success"
             icon={<CheckCircleIcon />}
@@ -125,7 +166,7 @@ export default function Dashboard() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Inactive Users"
-            value={userStats?.inactive || 0}
+            value={statsLoading ? "..." : userStats?.inactive || 0}
             subtitle="Inactive accounts"
             color="warning"
             icon={<ErrorIcon />}
@@ -134,13 +175,46 @@ export default function Dashboard() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatsCard
             title="Admin Users"
-            value={userStats?.byRole?.admin || 0}
+            value={statsLoading ? "..." : userStats?.byRole?.admin || 0}
             subtitle="System administrators"
             color="error"
             icon={<PeopleIcon />}
           />
         </Grid>
       </Grid>
+
+      {/* Show error if stats failed to load */}
+      {statsError && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid size={{ xs: 12 }}>
+            <Alert
+              severity="warning"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => refetchStats()}
+                >
+                  Retry
+                </Button>
+              }
+            >
+              Unable to load user statistics. The user service may be
+              unavailable.
+              {process.env.NODE_ENV === "development" && (
+                <details style={{ marginTop: "8px" }}>
+                  <summary>Error Details</summary>
+                  <pre style={{ fontSize: "12px" }}>
+                    {statsError instanceof Error
+                      ? statsError.message
+                      : String(statsError)}
+                  </pre>
+                </details>
+              )}
+            </Alert>
+          </Grid>
+        </Grid>
+      )}
 
       {/* User Management */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

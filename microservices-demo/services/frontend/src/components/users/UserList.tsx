@@ -6,6 +6,7 @@ import {
   InputAdornment,
   Alert,
   CircularProgress,
+  Button,
 } from "@mui/material";
 import {
   DataGrid,
@@ -22,7 +23,6 @@ import {
 } from "@mui/icons-material";
 import { useUsers, useDeleteUser } from "@/hooks/useApi";
 import { User } from "@/types";
-import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { formatDate, getRoleColor } from "@/lib/utils";
 
@@ -41,12 +41,19 @@ export const UserList: React.FC<UserListProps> = ({
   });
   const [search, setSearch] = useState("");
 
-  const { data, isLoading, error } = useUsers(
+  const { data, isLoading, error, refetch } = useUsers(
     paginationModel.page + 1,
     paginationModel.pageSize,
-    search
+    search || undefined
   );
   const deleteUserMutation = useDeleteUser();
+
+  // Log data for debugging
+  React.useEffect(() => {
+    console.log("UserList - data:", data);
+    console.log("UserList - isLoading:", isLoading);
+    console.log("UserList - error:", error);
+  }, [data, isLoading, error]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this user?")) {
@@ -130,16 +137,40 @@ export const UserList: React.FC<UserListProps> = ({
 
   if (error) {
     return (
-      <Alert severity="error">
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={() => refetch()}>
+            Retry
+          </Button>
+        }
+      >
         Failed to load users. Please check if the backend services are running.
+        {process.env.NODE_ENV === "development" && (
+          <details style={{ marginTop: "8px" }}>
+            <summary>Error Details</summary>
+            <pre style={{ fontSize: "12px", overflow: "auto" }}>
+              {error instanceof Error ? error.message : String(error)}
+            </pre>
+          </details>
+        )}
       </Alert>
     );
   }
 
+  // Ensure we have safe data structure
+  const safeData = {
+    items: data?.items || [],
+    total: data?.total || 0,
+  };
+
+  // Debug logging
+  console.log("UserList - safeData:", safeData);
+
   return (
     <Card
       title="User Management"
-      subtitle="Manage users through the API Gateway"
+      subtitle={`Manage users through the API Gateway (${safeData.total} total users)`}
       actions={
         <Button
           variant="contained"
@@ -168,10 +199,10 @@ export const UserList: React.FC<UserListProps> = ({
 
       <Box sx={{ height: 600, width: "100%" }}>
         <DataGrid
-          rows={data?.items || []}
+          rows={safeData.items}
           columns={columns}
           loading={isLoading}
-          rowCount={data?.total || 0}
+          rowCount={safeData.total}
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}
           paginationMode="server"
@@ -179,6 +210,18 @@ export const UserList: React.FC<UserListProps> = ({
           disableRowSelectionOnClick
           slots={{
             loadingOverlay: () => <CircularProgress />,
+            noRowsOverlay: () => (
+              <Box sx={{ p: 2, textAlign: "center" }}>
+                {search
+                  ? "No users found matching your search."
+                  : "No users found."}
+              </Box>
+            ),
+          }}
+          sx={{
+            "& .MuiDataGrid-row": {
+              cursor: "pointer",
+            },
           }}
         />
       </Box>

@@ -35,6 +35,38 @@ export class UsersController {
     };
   }
 
+  @Get('health')
+  async getHealth() {
+    return {
+      status: 'healthy',
+      service: 'user-service',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+    };
+  }
+
+  @Get('stats/overview')
+  async getUserStats() {
+    const stats = await this.usersService.getUserStats();
+    return {
+      success: true,
+      message: 'User statistics retrieved successfully',
+      data: stats,
+    };
+  }
+
+  @Post('validate')
+  async validateUser(@Body() validateUserDto: ValidateUserDto) {
+    const result = await this.usersService.validateUser(validateUserDto);
+    return {
+      success: result.isValid,
+      message: result.isValid
+        ? 'User validation successful'
+        : 'Invalid credentials',
+      data: result,
+    };
+  }
+
   @Get(':id')
   async getUserById(@Param('id') id: string) {
     const user = await this.usersService.findUserById(id);
@@ -75,28 +107,6 @@ export class UsersController {
     return {
       success: true,
       message: 'User deleted successfully',
-    };
-  }
-
-  @Post('validate')
-  async validateUser(@Body() validateUserDto: ValidateUserDto) {
-    const result = await this.usersService.validateUser(validateUserDto);
-    return {
-      success: result.isValid,
-      message: result.isValid
-        ? 'User validation successful'
-        : 'Invalid credentials',
-      data: result,
-    };
-  }
-
-  @Get('stats/overview')
-  async getUserStats() {
-    const stats = await this.usersService.getUserStats();
-    return {
-      success: true,
-      message: 'User statistics retrieved successfully',
-      data: stats,
     };
   }
 }

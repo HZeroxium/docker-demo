@@ -15,10 +15,10 @@ export class AppController {
   @Get('health')
   getHealth() {
     return {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
+      status: 'healthy',
       service: 'user-service',
-      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      database: 'connected',
     };
   }
 }

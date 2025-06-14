@@ -27,8 +27,8 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
     title: todo?.title || "",
     description: todo?.description || "",
     priority: todo?.priority || ("medium" as const),
-    dueDate: todo?.dueDate ? todo.dueDate.split("T")[0] : "",
-    userId: todo?.userId || "",
+    due_date: todo?.due_date ? todo.due_date.split("T")[0] : "", // Changed from dueDate to due_date
+    user_id: todo?.user_id || "", // Changed from userId to user_id
     completed: todo?.completed || false,
   });
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +49,8 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
       return;
     }
 
-    if (!formData.userId) {
+    if (!formData.user_id) {
+      // Changed from userId to user_id
       setError("Please select a user");
       return;
     }
@@ -60,7 +61,7 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
           title: formData.title,
           description: formData.description || undefined,
           priority: formData.priority,
-          dueDate: formData.dueDate || undefined,
+          due_date: formData.due_date || undefined, // Changed from dueDate to due_date
           completed: formData.completed,
         };
         await updateTodoMutation.mutateAsync({
@@ -72,8 +73,8 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
           title: formData.title,
           description: formData.description || undefined,
           priority: formData.priority,
-          dueDate: formData.dueDate || undefined,
-          userId: formData.userId,
+          due_date: formData.due_date || undefined, // Changed from dueDate to due_date
+          user_id: formData.user_id, // Changed from userId to user_id
         };
         await createTodoMutation.mutateAsync(createData);
       }
@@ -92,8 +93,8 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
       title: "",
       description: "",
       priority: "medium",
-      dueDate: "",
-      userId: "",
+      due_date: "", // Changed from dueDate to due_date
+      user_id: "", // Changed from userId to user_id
       completed: false,
     });
     setError(null);
@@ -171,9 +172,9 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
         <Input
           label="Due Date"
           type="date"
-          value={formData.dueDate}
-          onChange={(e) =>
-            setFormData({ ...formData, dueDate: e.target.value })
+          value={formData.due_date} // Changed from dueDate to due_date
+          onChange={
+            (e) => setFormData({ ...formData, due_date: e.target.value }) // Changed from dueDate to due_date
           }
           fullWidth
           InputLabelProps={{ shrink: true }}
@@ -183,9 +184,9 @@ export const CreateTodoModal: React.FC<CreateTodoModalProps> = ({
           <Input
             label="Assign to User"
             select
-            value={formData.userId}
-            onChange={(e) =>
-              setFormData({ ...formData, userId: e.target.value })
+            value={formData.user_id} // Changed from userId to user_id
+            onChange={
+              (e) => setFormData({ ...formData, user_id: e.target.value }) // Changed from userId to user_id
             }
             required
             fullWidth
