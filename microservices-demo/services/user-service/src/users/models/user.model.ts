@@ -1,3 +1,5 @@
+// users/models/user.model.ts
+
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { Field, ObjectType, ID, registerEnumType } from '@nestjs/graphql';
@@ -32,7 +34,6 @@ export class User extends Document {
     unique: true,
     lowercase: true,
     trim: true,
-    index: true, // Single index definition
   })
   email: string;
 
@@ -55,14 +56,12 @@ export class User extends Document {
   @Prop({
     enum: UserRole,
     default: UserRole.USER,
-    index: true,
   })
   role: UserRole;
 
   @Field()
   @Prop({
     default: true,
-    index: true,
   })
   isActive: boolean;
 
@@ -75,9 +74,9 @@ export class User extends Document {
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-// Compound indexes for better query performance
-UserSchema.index({ email: 1, isActive: 1 });
+// Create indexes efficiently without duplication - remove duplicate email index
 UserSchema.index({ role: 1, isActive: 1 });
+UserSchema.index({ isActive: 1 });
 UserSchema.index({ createdAt: -1 });
 
 // Pre-save hook for additional validation

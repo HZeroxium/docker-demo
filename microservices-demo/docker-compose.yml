@@ -95,6 +95,7 @@ services:
     environment:
       - MONGODB_URL=mongodb://user-mongo:27017/user_db
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RABBITMQ_EXCHANGE=user_exchange
       - NODE_ENV=production
     depends_on:
       user-mongo:
@@ -111,7 +112,7 @@ services:
     container_name: todo-service
     restart: unless-stopped
     ports:
-      - "8002:8000" # Changed from 8001:8000 to avoid conflict with Kong admin
+      - "8002:8000" # Fixed port mapping back to 8002:8000 for consistency
       - "50052:50052" # gRPC
     environment:
       - MONGODB_URL=mongodb://todo-mongo:27017
@@ -123,6 +124,12 @@ services:
       rabbitmq:
         condition: service_healthy
     networks: [microservices]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Frontend (Next.js)
   frontend:

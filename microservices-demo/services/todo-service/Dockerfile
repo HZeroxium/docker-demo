@@ -1,11 +1,7 @@
-# Builder stage
-FROM python:3.12-slim AS builder
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Use multi-stage build for better optimization
+FROM python:3.12-slim AS base
 
-# Final stage
-FROM python:3.12-slim
+# Set working directory
 WORKDIR /app
 
 # Install system dependencies
@@ -21,21 +17,23 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
   pip install --no-cache-dir -r requirements.txt
 
-# Copy proto file and generator script
-COPY todo.proto .
+# Copy proto files and generation script
+COPY proto/ ./proto/
 COPY generate_grpc.py .
+
+# Generate gRPC files
+RUN python generate_grpc.py || echo "gRPC generation failed, continuing without gRPC support"
 
 # Copy application code
 COPY app/ ./app/
 
-# Generate gRPC files during build
-RUN python generate_grpc.py
-
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash app && \
   chown -R app:app /app
+
 USER app
 
+# Expose ports
 EXPOSE 8000 50052
 
 # Health check

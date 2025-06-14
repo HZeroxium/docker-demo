@@ -1,3 +1,5 @@
+// users/models/user.interface.ts
+
 export interface IUser {
   id?: string;
   email: string;

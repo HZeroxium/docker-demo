@@ -1,5 +1,8 @@
+// users/users.module.ts
+
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RabbitModule } from '@/messaging/rabbit.module';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { UsersResolver } from './users.resolver';
@@ -15,6 +18,7 @@ import { User, UserSchema } from './models/user.model';
         collection: 'users',
       },
     ]),
+    RabbitModule,
   ],
   controllers: [UsersController, UsersGrpcController],
   providers: [UsersService, UsersResolver],

@@ -1,3 +1,5 @@
+// users/users.resolver.ts
+
 import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User } from './models/user.model';
@@ -9,6 +11,7 @@ import {
 } from './dto/create-user.dto';
 import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { AmqpConnection } from '@golevelup/nestjs-rabbitmq';
+import { Logger } from '@nestjs/common';
 
 @ObjectType()
 class UsersResponse {
@@ -54,6 +57,8 @@ class ValidateUserResponse {
 
 @Resolver(() => User)
 export class UsersResolver {
+  private readonly logger = new Logger(UsersResolver.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly rabbitMQService: AmqpConnection,
@@ -66,17 +71,19 @@ export class UsersResolver {
     const user = await this.usersService.createUser(createUserDto);
 
     // Publish event asynchronously without blocking response
-    this.rabbitMQService
-      .publish('user_exchange', 'user.created', {
+    try {
+      await this.rabbitMQService.publish('user_exchange', 'user.created', {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
         timestamp: new Date().toISOString(),
-      })
-      .catch((error) => {
-        console.error('Failed to publish user.created event:', error);
       });
+      this.logger.log(`Published user.created event for user ${user.id}`);
+    } catch (error) {
+      this.logger.error('Failed to publish user.created event:', error);
+      // Don't throw error to avoid breaking user creation
+    }
 
     return user;
   }

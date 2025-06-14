@@ -13,3 +13,6 @@ services:
       - name: todo-rest
         paths:
           - /todos
+      - name: todo-health
+        paths:
+          - /todos/health

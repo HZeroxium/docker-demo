@@ -1,12 +1,14 @@
+// app.module.ts
+
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { ConfigModule } from '@nestjs/config';
-import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { UsersModule } from './users/users.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { RabbitModule } from './messaging/rabbit.module';
 import { join } from 'path';
 
 @Module({
@@ -17,10 +19,13 @@ import { join } from 'path';
     MongooseModule.forRoot(
       process.env.MONGODB_URL || 'mongodb://user-mongo:27017/user_db',
       {
-        connectionName: 'default',
         retryAttempts: 5,
         retryDelay: 1000,
         bufferCommands: false,
+        maxPoolSize: 10,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        family: 4, // Use IPv4, skip trying IPv6
       },
     ),
     GraphQLModule.forRoot<ApolloDriverConfig>({
@@ -31,16 +36,7 @@ import { join } from 'path';
       introspection: true,
       path: '/graphql',
     }),
-    RabbitMQModule.forRoot({
-      exchanges: [
-        {
-          name: 'user_exchange',
-          type: 'topic',
-        },
-      ],
-      uri: process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672',
-      connectionInitOptions: { wait: false },
-    }),
+    RabbitModule,
     UsersModule,
   ],
   controllers: [AppController],

@@ -1,3 +1,5 @@
+// main.ts
+
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ValidationPipe, Logger } from '@nestjs/common';
@@ -29,60 +31,60 @@ async function bootstrap() {
       }),
     );
 
-    // Create gRPC microservice
-    const grpcApp = await NestFactory.createMicroservice<MicroserviceOptions>(
-      AppModule,
-      {
-        transport: Transport.GRPC,
-        options: {
-          package: 'users',
-          protoPath: join(__dirname, '../proto/users.proto'),
-          url: '0.0.0.0:50051',
-          maxReceiveMessageLength: 1024 * 1024 * 4, // 4MB
-          maxSendMessageLength: 1024 * 1024 * 4, // 4MB
-        },
-      },
-    );
-
-    // Create RabbitMQ microservice for messaging
-    const rabbitmqApp =
-      await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
-        transport: Transport.RMQ,
-        options: {
-          urls: [
-            process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672',
-          ],
-          queue: 'user_queue',
-          queueOptions: {
-            durable: true,
-          },
-          socketOptions: {
-            heartbeatIntervalInSeconds: 60,
-            reconnectTimeInSeconds: 5,
-          },
-        },
-      });
-
-    // Start all services with proper error handling
-    await Promise.all([
-      grpcApp
-        .listen()
-        .catch((error) => logger.error('gRPC service failed to start:', error)),
-      rabbitmqApp
-        .listen()
-        .catch((error) =>
-          logger.error('RabbitMQ service failed to start:', error),
-        ),
-      app
-        .listen(3001)
-        .catch((error) => logger.error('HTTP service failed to start:', error)),
-    ]);
-
-    logger.log('🚀 User Service started successfully!');
+    // Start HTTP server first
+    await app.listen(3001);
     logger.log('📡 HTTP Server: http://localhost:3001');
     logger.log('🔗 GraphQL Playground: http://localhost:3001/graphql');
-    logger.log('⚡ gRPC Server: localhost:50051');
-    logger.log('🐰 RabbitMQ Queue: user_queue');
+
+    // Create and start gRPC microservice
+    try {
+      const grpcApp = await NestFactory.createMicroservice<MicroserviceOptions>(
+        AppModule,
+        {
+          transport: Transport.GRPC,
+          options: {
+            package: 'users',
+            protoPath: join(__dirname, '../proto/users.proto'),
+            url: '0.0.0.0:50051',
+            maxReceiveMessageLength: 1024 * 1024 * 4, // 4MB
+            maxSendMessageLength: 1024 * 1024 * 4, // 4MB
+          },
+        },
+      );
+
+      await grpcApp.listen();
+      logger.log('⚡ gRPC Server: localhost:50051');
+    } catch (grpcError) {
+      logger.warn('gRPC service failed to start:', grpcError.message);
+    }
+
+    // Create and start RabbitMQ microservice
+    try {
+      const rabbitmqApp =
+        await NestFactory.createMicroservice<MicroserviceOptions>(AppModule, {
+          transport: Transport.RMQ,
+          options: {
+            urls: [
+              process.env.RABBITMQ_URL || 'amqp://guest:guest@rabbitmq:5672',
+            ],
+            queue: 'user_queue',
+            queueOptions: {
+              durable: true,
+            },
+            socketOptions: {
+              heartbeatIntervalInSeconds: 60,
+              reconnectTimeInSeconds: 5,
+            },
+          },
+        });
+
+      await rabbitmqApp.listen();
+      logger.log('🐰 RabbitMQ Queue: user_queue');
+    } catch (rabbitmqError) {
+      logger.warn('RabbitMQ service failed to start:', rabbitmqError.message);
+    }
+
+    logger.log('🚀 User Service started successfully!');
   } catch (error) {
     logger.error('❌ Error starting application:', error);
     process.exit(1);

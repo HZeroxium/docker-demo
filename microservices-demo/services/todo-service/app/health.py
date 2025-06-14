@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from .database import database
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ async def health_check():
 async def readiness_check():
     """Kubernetes readiness probe"""
     try:
+        if not database.client:
+            raise Exception("Database client not initialized")
         await database.client.admin.command("ping")
         return {"status": "ready"}
     except Exception as e:
@@ -55,3 +58,9 @@ async def readiness_check():
 async def liveness_check():
     """Kubernetes liveness probe"""
     return {"status": "alive"}
+
+
+@router.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "Todo Service is running! 🚀"}
