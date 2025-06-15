@@ -99,6 +99,95 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* Timer and Score Animations */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes countdown-flash {
+  0%, 50%, 100% {
+    opacity: 1;
+  }
+  25%, 75% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes score-pop {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(-10deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up-fade {
+  0% {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Timer critical state */
+.timer-critical {
+  animation: countdown-flash 1s infinite;
+}
+
+/* Score animation classes */
+.score-popup {
+  animation: score-pop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.slide-up {
+  animation: slide-up-fade 0.5s ease-out;
+}
+
+/* Correct/Wrong answer feedback */
+.correct-answer {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(139, 195, 74, 0.1)) !important;
+  border: 2px solid rgba(76, 175, 80, 0.5) !important;
+  animation: pulse 0.6s ease-in-out;
+}
+
+.wrong-answer {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(233, 30, 99, 0.1)) !important;
+  border: 2px solid rgba(244, 67, 54, 0.5) !important;
+  animation: pulse 0.6s ease-in-out;
+}
+
+/* Glass button hover effects */
+.glass-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Question option pulse effect */
+.pulse {
+  animation: pulse 2s infinite;
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

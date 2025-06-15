@@ -16,16 +16,20 @@ export interface JoinGameRequest {
 }
 
 export interface SubmitAnswerRequest {
-  player_id: string; // Fixed: Match backend field name
-  question_id: string; // Fixed: Match backend field name
-  selected_option: number; // Fixed: Should be number, not string
+  player_id: string;
+  question_id: string;
+  selected_option: number;
+  time_taken: number; // Added: Time taken to answer
 }
 
-export interface SubmitAnswerResponse {
-  is_correct: boolean; // Fixed: Match backend field name
-  new_score: number | null; // Fixed: Match backend field name
-  correct_answer: number | null; // Fixed: Match backend field name
+export interface AnswerResponse {
+  is_correct: boolean;
+  points_earned: number;
+  new_score: number | null;
+  time_taken: number;
+  speed_bonus: number;
   message: string;
+  correct_answer?: number; // Add this optional field
 }
 
 export const gameApi = {
@@ -39,9 +43,7 @@ export const gameApi = {
     return response.data;
   },
 
-  submitAnswer: async (
-    data: SubmitAnswerRequest
-  ): Promise<SubmitAnswerResponse> => {
+  submitAnswer: async (data: SubmitAnswerRequest): Promise<AnswerResponse> => {
     const response = await api.post("/answer", data);
     return response.data;
   },
@@ -76,11 +78,31 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error("API Error:", error.response?.data || error.message);
+    console.error("API Error Details:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+
     if (error.response?.data?.detail) {
-      throw new Error(error.response.data.detail);
+      // Handle FastAPI validation errors
+      if (Array.isArray(error.response.data.detail)) {
+        const validationErrors = error.response.data.detail
+          .map((err: any) => `${err.loc?.join(".")} - ${err.msg}`)
+          .join("; ");
+        throw new Error(`Validation Error: ${validationErrors}`);
+      } else if (typeof error.response.data.detail === "string") {
+        throw new Error(error.response.data.detail);
+      } else {
+        throw new Error("Request validation failed");
+      }
     }
-    throw error;
+
+    if (error.response?.status === 422) {
+      throw new Error("Invalid request data. Please check your input.");
+    }
+
+    throw new Error(error.message || "An unexpected error occurred");
   }
 );
 

@@ -19,12 +19,13 @@ class PlayerService:
     async def create_player(self, player_data: PlayerCreate) -> PlayerResponse:
         """Create a new player"""
         try:
-            # Create player dict without _id to let MongoDB generate it
-            # Fix: Use datetime.utcnow() directly instead of creating Player() instance
             player_dict = {
                 "name": player_data.name,
                 "score": 0,
-                "joined_at": datetime.utcnow(),  # Fixed: Direct datetime creation
+                "joined_at": datetime.utcnow(),
+                "total_questions": 0,  # Track total questions answered
+                "correct_answers": 0,  # Track correct answers
+                "average_speed": 0.0,  # Track average answer speed
             }
 
             result = await self.collection.insert_one(player_dict)
@@ -65,19 +66,57 @@ class PlayerService:
             return None
 
     async def update_player_score(
-        self, player_id: str, score_increment: int = 1
+        self,
+        player_id: str,
+        points_earned: int,
+        time_taken: float,
+        is_correct: bool = True,
     ) -> Optional[PlayerResponse]:
-        """Update player score"""
+        """Update player score with points earned and statistics"""
         try:
             if not ObjectId.is_valid(player_id):
                 logger.warning(f"Invalid player ID format: {player_id}")
                 return None
 
-            logger.info(f"Updating score for player {player_id} by {score_increment}")
+            logger.info(
+                f"Updating player {player_id}: +{points_earned} points, {time_taken}s"
+            )
 
+            # Get current player data for average calculation
+            current_player = await self.collection.find_one(
+                {"_id": ObjectId(player_id)}
+            )
+            if not current_player:
+                logger.warning(f"Player not found for score update: {player_id}")
+                return None
+
+            # Calculate new statistics
+            current_total = current_player.get("total_questions", 0)
+            current_correct = current_player.get("correct_answers", 0)
+            current_avg_speed = current_player.get("average_speed", 0.0)
+
+            new_total = current_total + 1
+            new_correct = current_correct + (1 if is_correct else 0)
+
+            # Calculate new average speed
+            if current_total > 0:
+                new_avg_speed = (
+                    (current_avg_speed * current_total) + time_taken
+                ) / new_total
+            else:
+                new_avg_speed = time_taken
+
+            # Update with statistics
             result = await self.collection.find_one_and_update(
                 {"_id": ObjectId(player_id)},
-                {"$inc": {"score": score_increment}},
+                {
+                    "$inc": {"score": points_earned},
+                    "$set": {
+                        "total_questions": new_total,
+                        "correct_answers": new_correct,
+                        "average_speed": round(new_avg_speed, 2),
+                    },
+                },
                 return_document=True,
             )
 

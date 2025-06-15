@@ -39,10 +39,21 @@ class Question(BaseModel):
         json_encoders={ObjectId: str},
     )
 
-    id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
+    id: Optional[str] = Field(default=None, alias="_id")  # Change to str
     question: str = Field(..., min_length=10, max_length=500)
     options: List[str] = Field(..., min_length=2, max_length=4)
     correct_answer: int = Field(..., ge=0, le=3)
+    time_limit: int = Field(default=30, description="Time limit in seconds")
+    max_points: int = Field(
+        default=100, description="Maximum points for correct answer"
+    )
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def validate_id(cls, v):
+        if isinstance(v, ObjectId):
+            return str(v)
+        return v
 
     @field_validator("options")
     @classmethod
@@ -59,7 +70,6 @@ class Question(BaseModel):
     @field_validator("correct_answer")
     @classmethod
     def validate_correct_answer(cls, v, info):
-        # We can't access options here in Pydantic v2, so we'll validate in the service layer
         return v
 
 
@@ -67,7 +77,9 @@ class QuestionResponse(BaseModel):
     id: str
     question: str
     options: List[str]
-    # Note: correct_answer is not included in response
+    time_limit: int = 30
+    max_points: int = 100
+    # Note: correct_answer is deliberately NOT included in response for security
 
 
 class AnswerSubmission(BaseModel):
@@ -76,6 +88,7 @@ class AnswerSubmission(BaseModel):
     selected_option: int = Field(
         ..., ge=0, le=3, description="Selected option index (0-3)"
     )
+    time_taken: float = Field(..., gt=0, description="Time taken to answer in seconds")
 
     @field_validator("player_id", "question_id")
     @classmethod
@@ -91,9 +104,21 @@ class AnswerSubmission(BaseModel):
             raise ValueError("Selected option must be between 0 and 3")
         return v
 
+    @field_validator("time_taken")
+    @classmethod
+    def validate_time_taken(cls, v):
+        if v <= 0:
+            raise ValueError("Time taken must be positive")
+        if v > 120:  # Max 2 minutes per question
+            raise ValueError("Time taken cannot exceed 120 seconds")
+        return v
+
 
 class AnswerResponse(BaseModel):
     is_correct: bool
+    points_earned: int = 0
     new_score: Optional[int] = None
-    correct_answer: Optional[int] = None
+    time_taken: float
+    speed_bonus: int = 0
     message: str = "Answer processed successfully"
+    correct_answer: Optional[int] = None  # Include correct answer for feedback

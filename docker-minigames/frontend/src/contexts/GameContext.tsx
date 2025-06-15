@@ -12,6 +12,8 @@ export interface Question {
   id: string;
   question: string;
   options: string[];
+  time_limit?: number; // Added: Time limit for the question
+  max_points?: number; // Added: Maximum points for the question
 }
 
 export interface GameState {
@@ -21,6 +23,15 @@ export interface GameState {
   currentQuestionIndex: number;
   gameStatus: "waiting" | "playing" | "finished";
   loading: boolean;
+  // Added: Timer and scoring states
+  questionStartTime: number | null;
+  timeRemaining: number;
+  currentQuestionTimeLimit: number;
+  lastScoreUpdate: {
+    points: number;
+    speedBonus: number;
+    timeTaken: number;
+  } | null;
 }
 
 type GameAction =
@@ -34,7 +45,16 @@ type GameAction =
   | {
       type: "UPDATE_PLAYER_SCORE";
       payload: { playerId: string; newScore: number };
-    };
+    }
+  // Added: Timer and scoring actions
+  | { type: "START_QUESTION_TIMER"; payload: { timeLimit: number } }
+  | { type: "UPDATE_TIMER"; payload: number }
+  | { type: "STOP_TIMER" }
+  | {
+      type: "SET_SCORE_UPDATE";
+      payload: { points: number; speedBonus: number; timeTaken: number };
+    }
+  | { type: "CLEAR_SCORE_UPDATE" };
 
 const initialState: GameState = {
   currentPlayer: null,
@@ -43,6 +63,11 @@ const initialState: GameState = {
   currentQuestionIndex: 0,
   gameStatus: "waiting",
   loading: false,
+  // Added: Timer initial states
+  questionStartTime: null,
+  timeRemaining: 0,
+  currentQuestionTimeLimit: 30,
+  lastScoreUpdate: null,
 };
 
 const gameReducer = (state: GameState, action: GameAction): GameState => {
@@ -60,6 +85,10 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
           state.currentQuestionIndex + 1,
           state.questions.length - 1
         ),
+        // Reset timer state for next question
+        questionStartTime: null,
+        timeRemaining: 0,
+        lastScoreUpdate: null,
       };
     case "SET_GAME_STATUS":
       return { ...state, gameStatus: action.payload };
@@ -85,6 +114,34 @@ const gameReducer = (state: GameState, action: GameAction): GameState => {
             ? { ...p, score: action.payload.newScore }
             : p
         ),
+      };
+    // Added: Timer and scoring cases
+    case "START_QUESTION_TIMER":
+      return {
+        ...state,
+        questionStartTime: Date.now(),
+        timeRemaining: action.payload.timeLimit,
+        currentQuestionTimeLimit: action.payload.timeLimit,
+      };
+    case "UPDATE_TIMER":
+      return {
+        ...state,
+        timeRemaining: Math.max(0, action.payload),
+      };
+    case "STOP_TIMER":
+      return {
+        ...state,
+        questionStartTime: null,
+      };
+    case "SET_SCORE_UPDATE":
+      return {
+        ...state,
+        lastScoreUpdate: action.payload,
+      };
+    case "CLEAR_SCORE_UPDATE":
+      return {
+        ...state,
+        lastScoreUpdate: null,
       };
     default:
       return state;
@@ -141,6 +198,21 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
           type: "UPDATE_PLAYER_SCORE",
           payload: { playerId: data.player_id, newScore: data.new_score },
         });
+
+        // Show score update animation if it's current player
+        if (
+          data.points_earned !== undefined &&
+          data.speed_bonus !== undefined
+        ) {
+          dispatch({
+            type: "SET_SCORE_UPDATE",
+            payload: {
+              points: data.points_earned,
+              speedBonus: data.speed_bonus,
+              timeTaken: data.time_taken,
+            },
+          });
+        }
       }
     });
 

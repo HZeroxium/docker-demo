@@ -1,8 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from bson import ObjectId
 from app.database.connection import get_database
 from app.models.question import Question, QuestionResponse
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,8 @@ class QuestionService:
                         id=str(question_data["_id"]),
                         question=question_data["question"],
                         options=question_data["options"],
+                        time_limit=question_data.get("time_limit", 30),
+                        max_points=question_data.get("max_points", 100),
                     )
                 )
             logger.info(f"Retrieved {len(questions)} questions")
@@ -46,13 +49,14 @@ class QuestionService:
             )
 
             if question_data:
-                # Manually construct the Question object with proper ObjectId handling
                 try:
                     question = Question(
-                        _id=question_data["_id"],  # Use _id instead of id
+                        _id=question_data["_id"],
                         question=question_data["question"],
                         options=question_data["options"],
                         correct_answer=question_data["correct_answer"],
+                        time_limit=question_data.get("time_limit", 30),
+                        max_points=question_data.get("max_points", 100),
                     )
                     logger.info(f"Found question: {question_id}")
                     return question
@@ -60,13 +64,14 @@ class QuestionService:
                     logger.error(
                         f"Error constructing question object: {construct_error}"
                     )
-                    # Fallback: create a simple dict-based approach
                     return Question.model_validate(
                         {
                             "_id": str(question_data["_id"]),
                             "question": question_data["question"],
                             "options": question_data["options"],
                             "correct_answer": question_data["correct_answer"],
+                            "time_limit": question_data.get("time_limit", 30),
+                            "max_points": question_data.get("max_points", 100),
                         }
                     )
             else:
@@ -76,15 +81,51 @@ class QuestionService:
             logger.error(f"Error getting question {question_id}: {e}")
             return None
 
-    async def verify_answer(
-        self, question_id: str, selected_option: int
-    ) -> tuple[bool, Optional[int]]:
-        """Verify if the selected option is correct and return correct answer"""
+    def calculate_score(
+        self,
+        is_correct: bool,
+        time_taken: float,
+        max_points: int = 100,
+        time_limit: int = 30,
+    ) -> Tuple[int, int]:
+        """
+        Calculate score based on correctness and speed
+        Returns: (total_points, speed_bonus)
+        """
+        if not is_correct:
+            return 0, 0
+
+        # Base points for correct answer (60% of max points)
+        base_points = int(max_points * 0.6)
+
+        # Speed bonus calculation (40% of max points)
+        # Faster answers get higher bonus
+        time_ratio = min(time_taken / time_limit, 1.0)  # Cap at 1.0
+
+        # Exponential decay for speed bonus - rewards very fast answers
+        speed_multiplier = math.exp(-2 * time_ratio)  # e^(-2t) gives good curve
+        speed_bonus = int(max_points * 0.4 * speed_multiplier)
+
+        total_points = base_points + speed_bonus
+
+        logger.info(
+            f"Score calculation - Correct: {is_correct}, Time: {time_taken}s/{time_limit}s, "
+            f"Base: {base_points}, Speed Bonus: {speed_bonus}, Total: {total_points}"
+        )
+
+        return total_points, speed_bonus
+
+    async def verify_answer_and_calculate_score(
+        self, question_id: str, selected_option: int, time_taken: float
+    ) -> Tuple[bool, int, int, Optional[Question]]:
+        """
+        Verify answer and calculate score based on correctness and speed
+        Returns: (is_correct, total_points, speed_bonus, question)
+        """
         try:
-            # Direct database query to avoid Pydantic issues
             if not ObjectId.is_valid(question_id):
                 logger.error(f"Invalid ObjectId format: {question_id}")
-                return False, None
+                return False, 0, 0, None
 
             question_data = await self.collection.find_one(
                 {"_id": ObjectId(question_id)}
@@ -92,24 +133,40 @@ class QuestionService:
 
             if not question_data:
                 logger.error(f"Question not found for verification: {question_id}")
-                return False, None
+                return False, 0, 0, None
 
-            correct_answer = question_data["correct_answer"]
-            is_correct = correct_answer == selected_option
+            # Create question object with proper ObjectId handling
+            question = Question(
+                _id=str(question_data["_id"]),  # Convert ObjectId to string
+                question=question_data["question"],
+                options=question_data["options"],
+                correct_answer=question_data["correct_answer"],
+                time_limit=question_data.get("time_limit", 30),
+                max_points=question_data.get("max_points", 100),
+            )
+
+            # Check correctness
+            is_correct = question.correct_answer == selected_option
+
+            # Calculate score
+            total_points, speed_bonus = self.calculate_score(
+                is_correct, time_taken, question.max_points, question.time_limit
+            )
 
             logger.info(
                 f"Answer verification - Question: {question_id}, "
-                f"Selected: {selected_option}, Correct: {correct_answer}, "
-                f"Result: {is_correct}"
+                f"Selected: {selected_option}, Correct: {question.correct_answer}, "
+                f"Time: {time_taken}s, Points: {total_points} (Speed: {speed_bonus})"
             )
 
-            return is_correct, correct_answer
+            return is_correct, total_points, speed_bonus, question
+
         except Exception as e:
-            logger.error(f"Error verifying answer: {e}")
-            return False, None
+            logger.error(f"Error verifying answer and calculating score: {e}")
+            return False, 0, 0, None
 
     async def seed_questions(self):
-        """Seed initial questions for demo"""
+        """Seed initial questions for demo with timing data"""
         sample_questions = [
             {
                 "question": "What is Docker?",
@@ -120,6 +177,8 @@ class QuestionService:
                     "A web framework",
                 ],
                 "correct_answer": 1,
+                "time_limit": 20,
+                "max_points": 100,
             },
             {
                 "question": "Which command is used to build a Docker image?",
@@ -130,11 +189,15 @@ class QuestionService:
                     "docker start",
                 ],
                 "correct_answer": 1,
+                "time_limit": 15,
+                "max_points": 80,
             },
             {
                 "question": "What file is used to define a Docker image?",
                 "options": ["docker.json", "Dockerfile", "docker.yaml", "image.config"],
                 "correct_answer": 1,
+                "time_limit": 10,
+                "max_points": 60,
             },
             {
                 "question": "Which Docker command shows running containers?",
@@ -145,6 +208,8 @@ class QuestionService:
                     "docker containers",
                 ],
                 "correct_answer": 0,
+                "time_limit": 25,
+                "max_points": 90,
             },
             {
                 "question": "What does the -d flag do in 'docker run -d'?",
@@ -155,6 +220,8 @@ class QuestionService:
                     "Enables debugging mode",
                 ],
                 "correct_answer": 2,
+                "time_limit": 30,
+                "max_points": 120,
             },
         ]
 
