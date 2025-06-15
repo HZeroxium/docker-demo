@@ -1,0 +1,147 @@
+filebeat.inputs:
+- type: container
+  enabled: true
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  stream: all
+  processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+      match_fields: ["container.id"]
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+      max_depth: 5
+      add_error_key: true
+  - timestamp:
+      field: "@timestamp"
+      layouts:
+        - "2006-01-02T15:04:05.000Z"
+        - "2006-01-02T15:04:05Z"
+      test:
+        - "2023-05-15T10:30:45.123Z"
+
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      host: "unix:///var/run/docker.sock"
+      templates:
+        - condition:
+            contains:
+              docker.container.name: user-service
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: user-service
+                service_type: backend
+                technology: nestjs
+                environment: docker-demo
+              fields_under_root: true
+              multiline.pattern: '^\['
+              multiline.negate: true
+              multiline.match: after
+              multiline.max_lines: 500
+              exclude_lines: ['^DEBUG']
+              
+        - condition:
+            contains:
+              docker.container.name: todo-service
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: todo-service
+                service_type: backend
+                technology: fastapi
+                environment: docker-demo
+              fields_under_root: true
+              multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+              multiline.negate: true
+              multiline.match: after
+              multiline.max_lines: 500
+              exclude_lines: ['^DEBUG']
+              
+        - condition:
+            contains:
+              docker.container.name: kong-gateway
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: kong-gateway
+                service_type: gateway
+                technology: kong
+                environment: docker-demo
+              fields_under_root: true
+              json.keys_under_root: true
+              json.add_error_key: true
+              
+        - condition:
+            contains:
+              docker.container.name: frontend
+          config:
+            - type: container
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              fields:
+                service: frontend
+                service_type: frontend
+                technology: nextjs
+                environment: docker-demo
+              fields_under_root: true
+              exclude_lines: ['^DEBUG', 'webpack-hmr']
+
+processors:
+- add_host_metadata:
+    when.not.contains.tags: forwarded
+    netinfo.enabled: false
+    cache.ttl: 5m
+    geo.name: "docker-host"
+    
+- add_cloud_metadata: 
+    timeout: 3s
+    
+- add_docker_metadata:
+    host: "unix:///var/run/docker.sock"
+    match_fields: ["container.id"]
+    match_pids: ["process.pid", "process.ppid"]
+    match_source: true
+    match_source_index: 4
+    match_short_id: false
+    cleanup_timeout: 60s
+    
+- drop_fields:
+    fields: ["agent.hostname", "agent.ephemeral_id", "ecs.version", "host.architecture", "host.containerized", "host.os.family", "host.os.kernel", "host.os.name", "host.os.platform", "host.os.version"]
+    ignore_missing: true
+
+output.logstash:
+  hosts: ["logstash:5044"]
+  compression_level: 3
+  worker: 4
+  bulk_max_size: 2048
+  template.name: "filebeat"
+  template.pattern: "filebeat-*"
+
+setup.template.settings:
+  index.number_of_shards: 1
+  index.codec: best_compression
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+  rotateeverybytes: 10485760
+
+monitoring.enabled: false
+
+http.enabled: true
+http.host: "0.0.0.0"
+http.port: 5066

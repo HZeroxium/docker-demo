@@ -1,0 +1,159 @@
+{
+  "index_patterns": ["microservices-logs-*"],
+  "version": 1,
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.refresh_interval": "5s",
+      "index.max_result_window": 50000,
+      "index.codec": "best_compression",
+      "index.mapping.total_fields.limit": 2000,
+      "index.mapping.depth.limit": 20,
+      "index.mapping.nested_fields.limit": 100,
+      "index.queries.cache.enabled": true,
+      "index.requests.cache.enable": true
+    },
+    "mappings": {
+      "dynamic_templates": [
+        {
+          "message_fields": {
+            "path_match": "*_message",
+            "mapping": {
+              "type": "text",
+              "analyzer": "standard",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 512
+                }
+              }
+            }
+          }
+        },
+        {
+          "string_fields": {
+            "match": "*",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "text",
+              "fields": {
+                "keyword": {
+                  "type": "keyword",
+                  "ignore_above": 256
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "@version": {
+          "type": "keyword"
+        },
+        "service_name": {
+          "type": "keyword",
+          "fields": {
+            "text": {
+              "type": "text",
+              "analyzer": "standard"
+            }
+          }
+        },
+        "log_level": {
+          "type": "keyword"
+        },
+        "severity": {
+          "type": "keyword"
+        },
+        "message": {
+          "type": "text",
+          "analyzer": "standard",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "log_message": {
+          "type": "text",
+          "analyzer": "standard",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 512
+            }
+          }
+        },
+        "logger": {
+          "type": "keyword"
+        },
+        "context": {
+          "type": "keyword"
+        },
+        "http_method": {
+          "type": "keyword"
+        },
+        "http_url": {
+          "type": "keyword",
+          "ignore_above": 2048
+        },
+        "http_endpoint": {
+          "type": "keyword",
+          "ignore_above": 512
+        },
+        "response_status": {
+          "type": "integer"
+        },
+        "http_status": {
+          "type": "integer"
+        },
+        "response_time": {
+          "type": "float"
+        },
+        "upstream_response_time": {
+          "type": "float"
+        },
+        "client_ip": {
+          "type": "ip"
+        },
+        "container": {
+          "properties": {
+            "name": {
+              "type": "keyword"
+            },
+            "id": {
+              "type": "keyword"
+            },
+            "image": {
+              "type": "keyword"
+            }
+          }
+        },
+        "environment": {
+          "type": "keyword"
+        },
+        "platform": {
+          "type": "keyword"
+        },
+        "log_timestamp": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis"
+        },
+        "tags": {
+          "type": "keyword"
+        },
+        "fields": {
+          "type": "object",
+          "dynamic": true
+        }
+      }
+    }
+  }
+}

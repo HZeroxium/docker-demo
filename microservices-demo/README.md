@@ -1,415 +1,492 @@
 # Microservices Demo with Docker
 
-This project demonstrates a comprehensive microservices architecture using:
+This project demonstrates a comprehensive microservices architecture using modern technologies and best practices for observability, monitoring, and distributed systems.
 
-- **User Service**: NestJS (TypeScript) with GraphQL, gRPC, and REST
-- **Todo Service**: FastAPI (Python) with GraphQL and REST
-- **Frontend**: Next.js with Material-UI
-- **API Gateway**: Kong
-- **Message Broker**: RabbitMQ
-- **Databases**: MongoDB (separate instances)
-- **Observability**: Prometheus, Grafana, ELK Stack (Elasticsearch, Logstash, Kibana), Zipkin
-
-## Quick Start
-
-1. **Start all services**:
-
-```bash
-docker-compose up -d
-```
-
-2. **Check service status**:
-
-```bash
-docker-compose ps
-```
-
-3. **View logs**:
-
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f user-service
-docker-compose logs -f todo-service
-docker-compose logs -f logstash
-```
-
-4. **Stop all services**:
-
-```bash
-docker-compose down
-```
-
-5. **Rebuild and restart**:
-
-```bash
-docker-compose down
-docker-compose up --build -d
-```
-
-## Service URLs
+## 🏗️ Architecture Overview
 
 ### Core Services
 
-- **Frontend Dashboard**: http://localhost:3000
-- **API Gateway (Kong)**: http://localhost:8000
-- **User Service Direct**: http://localhost:3001
-- **Todo Service Direct**: http://localhost:8002
+- **User Service**: NestJS (TypeScript) with GraphQL, gRPC, and REST APIs
+- **Todo Service**: FastAPI (Python) with GraphQL and REST APIs
+- **Frontend**: Next.js with Material-UI for modern web interface
+- **API Gateway**: Kong for unified API management and routing
 
-### APIs and GraphQL
+### Infrastructure Components
 
-- **User GraphQL Playground**: http://localhost:3001/graphql
-- **Todo GraphQL Playground**: http://localhost:8002/graphql
-- **User REST API**: http://localhost:8000/users
-- **Todo REST API**: http://localhost:8000/todos
+- **Message Broker**: RabbitMQ for asynchronous communication
+- **Databases**: MongoDB (separate instances for each service)
+- **Observability Stack**:
+  - Prometheus (metrics collection)
+  - Grafana (visualization and dashboards)
+  - ELK Stack (Elasticsearch, Logstash, Kibana for logging)
+  - Zipkin (distributed tracing)
 
-### Management UIs
+## 🚀 Quick Start
 
-- **Kong Admin**: http://localhost:8001
-- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3002 (admin/admin)
-- **Kibana**: http://localhost:5601
-- **Elasticsearch**: http://localhost:9200
-- **Logstash API**: http://localhost:9600
-- **Zipkin**: http://localhost:9411
+### Prerequisites
 
-## ELK Stack & Observability Setup
+- Docker Desktop with 8GB+ RAM allocated
+- Docker Compose v3.8+
+- Available ports: 3000, 3001, 5601, 8000, 8001, 8002, 9090, 9200, 9411
 
-### Initial Setup Commands
+### System Requirements
+
+For optimal performance, ensure your system has:
+
+- **Memory**: Minimum 8GB RAM, 12GB+ recommended
+- **Storage**: At least 10GB free space
+- **CPU**: 4+ cores recommended
+
+### Initial Setup
+
+1. **Clone and navigate to the project**:
+
+   ```bash
+   git clone <repository-url>
+   cd microservices-demo
+   ```
+
+2. **Configure system settings (Linux/WSL)**:
+
+   ```bash
+   # Increase virtual memory map count for Elasticsearch
+   sudo sysctl -w vm.max_map_count=262144
+   echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
+   ```
+
+3. **Start all services**:
+
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Monitor startup progress**:
+
+   ```bash
+   # Check service status
+   docker-compose ps
+
+   # Follow logs for troubleshooting
+   docker-compose logs -f elasticsearch
+   docker-compose logs -f logstash
+   ```
+
+5. **Verify services are healthy**:
+
+   ```bash
+   # Wait 2-3 minutes for Elasticsearch to initialize
+   curl <http://localhost:9200/_cluster/health>
+
+   # Check Logstash pipeline
+   curl <http://localhost:9600/_node/stats>
+   ```
+
+## 🌐 Service URLs
+
+### Core Application
+
+- **Frontend Dashboard**: <http://localhost:3000>
+- **API Gateway (Kong)**: <http://localhost:8000>
+- **User Service Direct**: <http://localhost:3001>
+- **Todo Service Direct**: <http://localhost:8002>
+
+### API Endpoints
+
+- **User GraphQL Playground**: <http://localhost:3001/graphql>
+- **Todo GraphQL Playground**: <http://localhost:8002/graphql>
+- **User REST API**: <http://localhost:8000/users>
+- **Todo REST API**: <http://localhost:8000/todos>
+
+### Management Interfaces
+
+- **Kong Admin API**: <http://localhost:8001>
+- **RabbitMQ Management**: <http://localhost:15672> (guest/guest)
+- **Prometheus Metrics**: <http://localhost:9090>
+- **Grafana Dashboards**: <http://localhost:3002> (admin/admin123)
+- **Kibana Logs**: <http://localhost:5601>
+- **Elasticsearch API**: <http://localhost:9200>
+- **Logstash API**: <http://localhost:9600>
+- **Zipkin Tracing**: <http://localhost:9411>
+
+## 📊 Observability Setup
+
+### ELK Stack Configuration
+
+The logging pipeline follows this flow:
+**Docker Containers** → **Filebeat** → **Logstash** → **Elasticsearch** → **Kibana**
+
+#### Initial Configuration Steps
+
+1. **Wait for Elasticsearch to be healthy** (2-3 minutes on first start):
+
+   ```bash
+   # Monitor Elasticsearch startup
+   docker-compose logs -f elasticsearch
+
+   # Check cluster health
+   curl <http://localhost:9200/_cluster/health?pretty>
+   ```
+
+2. **Verify Logstash pipeline**:
+
+   ```bash
+   # Check pipeline statistics
+   curl <http://localhost:9600/_node/stats/pipeline?pretty>
+
+   # Monitor processing
+   docker-compose logs -f logstash
+   ```
+
+3. **Configure Kibana Index Patterns**:
+   - Navigate to <http://localhost:5601>
+   - Go to **Stack Management** → **Index Patterns**
+   - Create pattern: `microservices-logs-*`
+   - Set time field: `@timestamp`
+   - Click **Create index pattern**
+
+#### Viewing Logs in Kibana
+
+1. **Access Discover tab** in Kibana
+2. **Use these sample queries**:
+
+   ```text
+   # View all error logs
+   log_level:ERROR
+
+   # Service-specific logs
+   service_name:"user-service"
+
+   # HTTP request logs with slow responses
+   response_time:>1000 AND http_method:*
+
+   # Failed HTTP requests
+   http_status:>=400
+
+   # Recent database operations
+   log_message:"database" AND @timestamp:>now-1h
+   ```
+
+3. **Create visualizations**:
+   - Go to **Visualize Library** → **Create visualization**
+   - Choose chart type (Line, Bar, Pie, etc.)
+   - Configure aggregations and filters
+
+### Prometheus & Grafana Setup
+
+#### Accessing Grafana
+
+1. **Open Grafana**: <http://localhost:3002>
+2. **Login**: admin / admin123
+3. **Pre-configured dashboards**:
+   - Microservices Overview
+   - User Service Dashboard
+   - Todo Service Dashboard
+
+#### Key Metrics to Monitor
+
+**User Service Metrics**:
+
+```text
+# Request rate
+rate(http_requests_total{job="user-service"}[5m])
+
+# Response time percentiles
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="user-service"}[5m]))
+
+# Error rate
+rate(http_requests_total{job="user-service",status=~"5.."}[5m]) / rate(http_requests_total{job="user-service"}[5m])
+
+# Memory usage
+process_resident_memory_bytes{job="user-service"}
+```
+
+**Todo Service Metrics**:
+
+```text
+# API endpoint performance
+rate(http_requests_total{job="todo-service"}[5m])
+
+# Database operations
+rate(mongodb_op_counters_total{instance="todo-mongo:27017"}[5m])
+
+# Python process metrics
+rate(process_cpu_seconds_total{job="todo-service"}[5m])
+```
+
+#### Creating Custom Dashboards
+
+1. **Navigate to Dashboards** → **New Dashboard**
+2. **Add Panel** with these configurations:
+   - **Data Source**: Prometheus
+   - **Query**: Use PromQL expressions above
+   - **Visualization**: Time series, Stat, Gauge, etc.
+3. **Configure alerts** for critical metrics
+
+### Distributed Tracing with Zipkin
+
+1. **Access Zipkin UI**: <http://localhost:9411>
+2. **View traces** for request flows across services
+3. **Analyze performance** bottlenecks and dependencies
+
+## 🛠️ Development Workflow
+
+### Local Development with Hot Reload
 
 ```bash
-# Clean up any orphaned containers first
-docker-compose down --remove-orphans
+# Start only infrastructure services
+docker-compose up -d user-mongo todo-mongo rabbitmq elasticsearch
 
-# Start with increased memory allocation (recommended: 8GB+ for Docker)
-docker-compose up -d
-
-# Wait for Elasticsearch to be healthy (can take 2-3 minutes)
-docker-compose logs -f elasticsearch
-
-# Check all services status
-docker-compose ps
-```
-
-### Elasticsearch Configuration
-
-The Elasticsearch service requires:
-
-- **Memory**: At least 1GB heap size (configured)
-- **Virtual Memory**: vm.max_map_count ≥ 262144
-
-**For Windows/Mac Docker Desktop:**
-
-```bash
-# Check current setting
-docker run --rm -it alpine sysctl vm.max_map_count
-
-# If less than 262144, increase it:
-# Windows: Set in Docker Desktop settings or use WSL2
-wsl -d docker-desktop sysctl -w vm.max_map_count=262144
-```
-
-**For Linux:**
-
-```bash
-sudo sysctl -w vm.max_map_count=262144
-echo 'vm.max_map_count=262144' | sudo tee -a /etc/sysctl.conf
-```
-
-### Service Integration Requirements
-
-#### For User Service (NestJS)
-
-Add to your NestJS service:
-
-1. **Install required packages:**
-
-```bash
-npm install @nestjs/prometheus prom-client winston winston-elasticsearch
-```
-
-2. **Add structured logging configuration**
-3. **Add Prometheus metrics endpoint**
-4. **Add health check endpoint**
-
-#### For Todo Service (FastAPI)
-
-Add to your FastAPI service:
-
-1. **Install required packages:**
-
-```bash
-pip install prometheus-client python-json-logger elasticsearch
-```
-
-2. **Add structured logging configuration**
-3. **Add Prometheus metrics endpoint**
-4. **Add health check endpoint**
-
-### Kibana Dashboard Setup
-
-1. Navigate to http://localhost:5601
-2. Go to **Stack Management > Index Patterns**
-3. Create index pattern: `microservices-logs-*`
-4. Set time field: `@timestamp`
-5. Go to **Discover** to view logs
-
-### Common Log Queries in Kibana
-
-```
-# Error logs
-level:ERROR
-
-# Service-specific logs
-service_name:user-service
-
-# HTTP requests with slow response
-response_time:>1000
-
-# Failed HTTP requests
-response_status:>=400
-```
-
-### Grafana Dashboard Setup
-
-1. Navigate to http://localhost:3002 (admin/admin)
-2. Datasources are pre-configured
-3. Import dashboards for microservices monitoring
-4. Create alerts for service health
-
-### Troubleshooting ELK Stack
-
-```bash
-# Check Elasticsearch health
-curl http://localhost:9200/_cluster/health?pretty
-
-# Check if indices are created
-curl http://localhost:9200/_cat/indices?v
-
-# Check Logstash pipeline status
-curl http://localhost:9600/_node/stats/pipeline?pretty
-
-# View Filebeat logs
-docker-compose logs filebeat
-
-# Restart observability stack only
-docker-compose restart elasticsearch logstash kibana filebeat
-```
-
-## Logging and Monitoring
-
-### ELK Stack Setup
-
-The observability stack includes:
-
-1. **Elasticsearch**: Stores and indexes logs
-2. **Logstash**: Processes and transforms logs from services
-3. **Kibana**: Visualizes logs and creates dashboards
-4. **Filebeat**: Collects Docker container logs
-
-### Log Formats
-
-Services use structured logging:
-
-```bash
-# View live logs from all services
-docker-compose logs -f
-
-# View specific service logs
-docker-compose logs -f user-service
-docker-compose logs -f todo-service
-docker-compose logs -f kong-gateway
-docker-compose logs -f logstash
-
-# Check Logstash processing
-curl http://localhost:9600/_node/stats
-```
-
-### Kibana Dashboards
-
-1. **Access Kibana**: http://localhost:5601
-2. **Create Index Pattern**: `microservices-logs-*`
-3. **Sample Queries**:
-   - All errors: `level:ERROR`
-   - User service logs: `service_name:user-service`
-   - HTTP requests: `http_method:*`
-   - Slow responses: `response_time:>1000`
-
-### Log Analysis Examples
-
-```bash
-# Search logs in Elasticsearch directly
-curl -X GET "localhost:9200/microservices-logs-*/_search?q=level:ERROR&pretty"
-
-# Get log statistics
-curl -X GET "localhost:9200/microservices-logs-*/_search?pretty" \
-  -H 'Content-Type: application/json' \
-  -d '{"aggs": {"services": {"terms": {"field": "service_name"}}}}'
-
-# Monitor Logstash pipeline
-curl -X GET "localhost:9600/_node/stats/pipeline?pretty"
-```
-
-## Architecture Overview
-
-```
-Frontend (Next.js) → Kong API Gateway → Microservices
-                                      ├── User Service (NestJS/TypeScript)
-                                      └── Todo Service (FastAPI/Python)
-
-Message Broker (RabbitMQ) ← → Services communicate via events
-
-Databases:
-├── User MongoDB (user_db)
-└── Todo MongoDB (todos)
-
-Observability:
-├── Prometheus (metrics)
-├── Grafana (dashboards)
-├── ELK Stack (logs)
-└── Zipkin (tracing)
-```
-
-## Development Tips
-
-### Hot Reload Development
-
-```bash
-# Start only databases and message broker
-docker-compose up -d user-mongo todo-mongo rabbitmq
-
-# Run services locally with hot reload
+# Run services locally for development
 cd services/user-service && npm run start:dev
 cd services/todo-service && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 cd services/frontend && npm run dev
 ```
 
+### Service Testing
+
+```bash
+# Test REST APIs
+curl -X GET <http://localhost:3001/users>
+curl -X GET <http://localhost:8002/todos>
+
+# Test through API Gateway
+curl -X GET <http://localhost:8000/users>
+curl -X GET <http://localhost:8000/todos>
+
+# Test health endpoints
+curl <http://localhost:3001/health>
+curl <http://localhost:8002/health>
+```
+
 ### Database Management
 
 ```bash
-# Connect to user database
+# Connect to User Service database
 docker exec -it user-mongo mongosh user_db
 
-# Connect to todo database
+# Connect to Todo Service database
 docker exec -it todo-mongo mongosh todos
 
-# View database contents
+# Basic database operations
 show collections
-db.users.find()
-db.items.find()
+db.users.find().limit(5)
+db.todos.find().limit(5)
 ```
 
-### Service Communication Testing
+## 🔧 Troubleshooting Guide
+
+### Common Issues and Solutions
+
+#### 1. Elasticsearch Won't Start
+
+**Problem**: Elasticsearch container exits with memory errors
+
+**Solution**:
 
 ```bash
-# Test gRPC services (requires grpcurl)
-grpcurl -plaintext localhost:50051 users.UserService/GetUsers
-grpcurl -plaintext localhost:50052 todos.TodoService/GetTodos
+# Check Docker memory allocation (should be 8GB+)
+docker system info | grep "Total Memory"
 
-# Test RabbitMQ messages
-docker exec -it rabbitmq rabbitmqctl list_queues
+# Increase vm.max_map_count
+sudo sysctl -w vm.max_map_count=262144
+
+# For Windows/WSL
+wsl -d docker-desktop sysctl -w vm.max_map_count=262144
 ```
 
-## Troubleshooting
+#### 2. Logstash Pipeline Issues
 
-### Common Issues
+**Problem**: Logs not appearing in Kibana
 
-1. **Port conflicts**: Make sure ports 3000, 3001, 8000, 8001, 5601, 9200 are available
-2. **MongoDB connection**: Wait for health checks to pass before services start
-3. **Memory issues**: Ensure Docker has enough allocated memory (6GB+ recommended for ELK)
-4. **Elasticsearch startup**: May take 60-90 seconds on first run
-5. **Logstash processing**: Check pipeline stats if logs aren't appearing
-
-### Health Checks
+**Solutions**:
 
 ```bash
-# Check all service health
-curl http://localhost:3001/health  # User service
-curl http://localhost:8002/health  # Todo service
-curl http://localhost:8000/        # Kong gateway
-curl http://localhost:9200/_health # Elasticsearch
-curl http://localhost:9600/_node/stats # Logstash
-```
-
-### ELK Stack Troubleshooting
-
-```bash
-# Check Elasticsearch cluster health
-curl http://localhost:9200/_cluster/health?pretty
-
-# Check available indices
-curl http://localhost:9200/_cat/indices?v
-
 # Check Logstash pipeline status
-curl http://localhost:9600/_node/stats/pipeline?pretty
+curl <http://localhost:9600/_node/stats/pipeline?pretty>
 
-# View Filebeat status
-docker-compose exec filebeat filebeat test output
+# Verify Filebeat connection
+docker-compose logs filebeat
+
+# Check Elasticsearch indices
+curl <http://localhost:9200/_cat/indices?v>
+
+# Restart the observability stack
+docker-compose restart elasticsearch logstash kibana filebeat
 ```
 
-### Reset Everything
+#### 3. Service Connection Issues
+
+**Problem**: Services can't connect to databases or message broker
+
+**Solutions**:
 
 ```bash
-docker-compose down -v  # Remove volumes too
-docker system prune -a  # Clean up Docker
-docker-compose up --build -d
+# Check service dependencies
+docker-compose ps
+
+# Verify network connectivity
+docker-compose exec user-service ping user-mongo
+docker-compose exec todo-service ping todo-mongo
+
+# Check service logs
+docker-compose logs user-service
+docker-compose logs todo-service
 ```
 
-## Performance Considerations
+#### 4. Port Conflicts
 
-- **Elasticsearch**: Allocate at least 2GB RAM
-- **Logstash**: Configured with 256MB heap size
-- **Log Retention**: Logs rotate daily, configure retention policy as needed
-- **Index Management**: Consider implementing ILM (Index Lifecycle Management) for production
+**Problem**: Ports already in use
+
+**Solutions**:
 
 ```bash
-# Connect to user database
-docker exec -it user-mongo mongosh user_db
+# Check port usage
+netstat -tulpn | grep :3000
+netstat -tulpn | grep :9200
 
-# Connect to todo database
-docker exec -it todo-mongo mongosh todos
+# Kill processes using required ports
+sudo lsof -t -i:3000 | xargs kill -9
 
-# View database contents
-show collections
-db.users.find()
-db.items.find()
+# Or modify docker-compose.yml to use different ports
 ```
 
-### Service Communication Testing
-
-```bash
-# Test gRPC services (requires grpcurl)
-grpcurl -plaintext localhost:50051 users.UserService/GetUsers
-grpcurl -plaintext localhost:50052 todos.TodoService/GetTodos
-
-# Test RabbitMQ messages
-docker exec -it rabbitmq rabbitmqctl list_queues
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Port conflicts**: Make sure ports 3000, 3001, 8000, 8001 are available
-2. **MongoDB connection**: Wait for health checks to pass before services start
-3. **Memory issues**: Ensure Docker has enough allocated memory (4GB+ recommended)
-
-### Health Checks
+### Health Check Commands
 
 ```bash
 # Check all service health
-curl http://localhost:3001/health  # User service
-curl http://localhost:8001/health  # Todo service
-curl http://localhost:8000/        # Kong gateway
+curl <http://localhost:3001/health>  # User service
+curl <http://localhost:8002/health>  # Todo service
+curl <http://localhost:8000/>        # Kong gateway
+curl <http://localhost:9200/_health> # Elasticsearch
+curl <http://localhost:9600/_node/stats> # Logstash
+
+# Check service discovery
+docker-compose exec kong kong health
+docker-compose exec rabbitmq rabbitmqctl status
 ```
 
-### Reset Everything
+### Complete Reset
+
+If you encounter persistent issues:
 
 ```bash
-docker-compose down -v  # Remove volumes too
-docker system prune -a  # Clean up Docker
+# Stop all services and remove volumes
+docker-compose down -v
+
+# Clean up Docker system
+docker system prune -a --volumes
+
+# Remove all project-related containers and images
+docker-compose down --rmi all --volumes --remove-orphans
+
+# Restart fresh
 docker-compose up --build -d
 ```
+
+## 📈 Performance Optimization
+
+### Resource Allocation
+
+**Recommended Docker Desktop Settings**:
+
+- **Memory**: 12GB
+- **Swap**: 2GB
+- **Disk**: 100GB
+
+**Service-specific Tuning**:
+
+```yaml
+# Elasticsearch (in docker-compose.yml)
+environment:
+  - "ES_JAVA_OPTS=-Xms2g -Xmx2g"  # Increase for production
+
+# Logstash
+environment:
+  - "LS_JAVA_OPTS=-Xmx1g -Xms1g"
+
+# Application services
+deploy:
+  resources:
+    limits:
+      memory: 512M
+    reservations:
+      memory: 256M
+```
+
+### Monitoring Performance
+
+```bash
+# Monitor container resource usage
+docker stats
+
+# Check disk usage
+docker system df
+
+# Monitor log sizes
+du -sh /var/lib/docker/containers/*/*-json.log
+```
+
+## 🔒 Security Considerations
+
+### Production Checklist
+
+- [ ] Change default passwords (Grafana, RabbitMQ)
+- [ ] Enable authentication for Elasticsearch/Kibana
+- [ ] Configure Kong rate limiting and authentication
+- [ ] Use secrets management for sensitive data
+- [ ] Enable TLS/SSL for all communications
+- [ ] Implement proper network segmentation
+- [ ] Configure log retention policies
+- [ ] Set up backup strategies for databases
+
+### Basic Security Setup
+
+```bash
+# Generate strong passwords
+openssl rand -base64 32
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env with your secure values
+```
+
+## 📚 Additional Resources
+
+### Architecture Diagrams
+
+```text
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Frontend  │────│ Kong Gateway│────│  Services   │
+│  (Next.js)  │    │ (API Gateway)│    │             │
+└─────────────┘    └─────────────┘    └─────────────┘
+                                              │
+                   ┌─────────────┐    ┌─────────────┐
+                   │  RabbitMQ   │────│  MongoDB    │
+                   │ (Messages)  │    │ (Databases) │
+                   └─────────────┘    └─────────────┘
+                                              │
+                   ┌─────────────────────────────────┐
+                   │      Observability Stack        │
+                   │ Prometheus │ Grafana │ ELK │ Zipkin │
+                   └─────────────────────────────────┘
+```
+
+### Learning Resources
+
+- [Docker Documentation](https://docs.docker.com/)
+- [Kubernetes Migration Guide](https://kubernetes.io/docs/concepts/)
+- [Microservices Patterns](https://microservices.io/patterns/)
+- [Observability Best Practices](https://opentelemetry.io/)
+
+### Support and Contribution
+
+For issues, feature requests, or contributions:
+
+1. Check existing issues in the repository
+2. Create detailed bug reports with logs
+3. Follow the contribution guidelines
+4. Submit pull requests for improvements
+
+---
+
+**Note**: This is a demonstration project. For production deployment, implement proper security measures, monitoring, and infrastructure as code practices.

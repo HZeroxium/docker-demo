@@ -7,17 +7,45 @@ datasources:
     url: http://prometheus:9090
     isDefault: true
     editable: true
+    uid: prometheus
+    jsonData:
+      timeInterval: "5s"
+      queryTimeout: "60s"
+      httpMethod: "POST"
+    secureJsonData: {}
 
-  - name: Elasticsearch
+  - name: Elasticsearch-Logs
     type: elasticsearch
     access: proxy
     url: http://elasticsearch:9200
-    database: microservices-logs-*
+    database: "microservices-logs-*"
     timeField: "@timestamp"
     editable: true
+    uid: elasticsearch-logs
     jsonData:
-      interval: Daily
+      interval: "Daily"
       timeInterval: "10s"
       maxConcurrentShardRequests: 5
-      logMessageField: message
-      logLevelField: level
+      logMessageField: "message"
+      logLevelField: "log_level"
+      esVersion: "8.0.0"
+      includeFrozen: false
+      sigV4Auth: false
+    secureJsonData: {}
+
+  - name: Elasticsearch-Metrics
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "microservices-metrics-*"
+    timeField: "@timestamp"
+    editable: true
+    uid: elasticsearch-metrics
+    jsonData:
+      interval: "Daily"
+      timeInterval: "15s"
+      maxConcurrentShardRequests: 3
+      esVersion: "8.0.0"
+      includeFrozen: false
+      sigV4Auth: false
+    secureJsonData: {}

@@ -191,18 +191,21 @@ services:
   logstash:
     image: docker.elastic.co/logstash/logstash:8.17.7
     container_name: logstash
+    user: root
     ports:
       - "5044:5044" # Beats input
       - "5000:5000" # TCP input
       - "9600:9600" # HTTP API
     environment:
-      - "LS_JAVA_OPTS=-Xmx512m -Xms512m"
+      - "LS_JAVA_OPTS=-Xmx1g -Xms1g"
       - "XPACK_MONITORING_ENABLED=false"
+      - "LOG_LEVEL=info"
     volumes:
-      - ./observability/elastic/pipeline:/usr/share/logstash/pipeline:ro
-      - ./observability/elastic/config:/usr/share/logstash/config:ro
-      - ./observability/elastic/templates:/usr/share/logstash/templates:ro
+      - ./observability/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./observability/logstash/config:/usr/share/logstash/config:rw
+      - ./observability/logstash/templates:/usr/share/logstash/templates:ro
       - logstash_data:/usr/share/logstash/data
+      - /var/log/logstash:/var/log/logstash:rw
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -219,7 +222,7 @@ services:
     container_name: filebeat
     user: root
     volumes:
-      - ./observability/elastic/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./observability/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - filebeat_data:/usr/share/filebeat/data
@@ -290,13 +293,18 @@ services:
       - "3002:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
     volumes:
       - grafana_data:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+      - elasticsearch
     networks: [microservices]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
