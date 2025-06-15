@@ -2,21 +2,25 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Paper,
-  Typography,
-  Box,
-  Button,
-  LinearProgress,
   Container,
   Alert,
-  Card,
-  CardContent,
+  LinearProgress,
+  Typography,
+  Button,
 } from "@mui/material";
-import { CheckCircle, Cancel, NavigateNext } from "@mui/icons-material";
 import { useGame } from "../../contexts/GameContext";
 import { gameApi } from "../../services/api";
 import { useQuestionTimer } from "../../hooks/useQuestionTimer";
 import QuestionTimer from "../ui/QuestionTimer";
 import ScoreAnimation from "../ui/ScoreAnimation";
+
+// Import new quiz components
+import QuizProgress from "../quiz/QuizProgress";
+import QuizQuestion from "../quiz/QuizQuestion";
+import QuizOptions from "../quiz/QuizOptions";
+import QuizFeedback from "../quiz/QuizFeedback";
+import QuizActions from "../quiz/QuizActions";
+// import DebugTimerInfo from "../quiz/DebugTimerInfo"; // Commented out for production
 
 const QuizScreen: React.FC = () => {
   const { state, dispatch } = useGame();
@@ -325,182 +329,48 @@ const QuizScreen: React.FC = () => {
   return (
     <Container maxWidth="md" sx={{ mt: 2 }}>
       <Paper className="glass-card slide-up" sx={{ p: 4 }}>
-        {/* Progress Header */}
-        <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mb: 1,
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              Question {state.currentQuestionIndex + 1} of{" "}
-              {state.questions.length}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="primary"
-              fontWeight="bold"
-            >{`Score: ${state.currentPlayer.score}`}</Typography>
-          </Box>
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              "& .MuiLinearProgress-bar": {
-                background: "linear-gradient(45deg, #00d4ff, #ff6b35)",
-              },
-            }}
-          />
-        </Box>
+        {/* Progress Header - Refactored to Component */}
+        <QuizProgress
+          currentQuestionIndex={state.currentQuestionIndex}
+          totalQuestions={state.questions.length}
+          playerScore={state.currentPlayer.score}
+          progress={progress}
+        />
 
         {/* Timer Component with enhanced debug info */}
-        <QuestionTimer
+        {/* <QuestionTimer
           timeRemaining={timeRemaining}
           totalTime={currentQuestion?.time_limit || 30}
           isActive={isActive && !feedback.show}
           progress={timerProgress}
+        /> */}
+
+        {/* Debug Timer Info - Commented out for production */}
+        {/* 
+        <DebugTimerInfo
+          isActive={isActive}
+          timeRemaining={timeRemaining}
+          timerProgress={timerProgress}
+          questionStartTime={questionStartTime}
+          feedbackShow={feedback.show}
+          isTimeUp={isTimeUp}
         />
+        */}
 
-        {/* Enhanced Debug Timer Info */}
-        {process.env.NODE_ENV === "development" && (
-          <Box
-            sx={{
-              mb: 2,
-              p: 1,
-              bgcolor: isActive
-                ? "rgba(76, 175, 80, 0.1)"
-                : "rgba(244, 67, 54, 0.1)",
-              borderRadius: 1,
-              border: isActive ? "1px solid #4caf50" : "1px solid #f44336",
-            }}
-          >
-            <Typography variant="caption" display="block">
-              <strong>Debug Timer Status:</strong>
-            </Typography>
-            <Typography variant="caption" display="block">
-              Active: <strong>{isActive ? "✅ YES" : "❌ NO"}</strong> | Time:{" "}
-              <strong>{timeRemaining}s</strong> | Progress:{" "}
-              <strong>{Math.round(timerProgress)}%</strong>
-            </Typography>
-            <Typography variant="caption" display="block">
-              Question Start:{" "}
-              <strong>
-                {questionStartTime
-                  ? new Date(questionStartTime).toLocaleTimeString()
-                  : "Not Set"}
-              </strong>
-            </Typography>
-            <Typography variant="caption" display="block">
-              Feedback Showing: <strong>{feedback.show ? "Yes" : "No"}</strong>{" "}
-              | Time Up: <strong>{isTimeUp ? "Yes" : "No"}</strong>
-            </Typography>
-          </Box>
-        )}
+        {/* Question - Refactored to Component */}
+        <QuizQuestion question={currentQuestion.question} />
 
-        {/* Question */}
-        <Typography
-          variant="h5"
-          component="h2"
-          gutterBottom
-          sx={{ mb: 4, fontWeight: "bold" }}
-        >
-          {currentQuestion.question}
-        </Typography>
-
-        {/* Options */}
-        <Box sx={{ mb: 4 }}>
-          {currentQuestion.options.map((option, index) => (
-            <Card
-              key={index}
-              className={`glass-button ${
-                feedback.show
-                  ? feedback.correctAnswer === index
-                    ? "correct-answer"
-                    : selectedOption === index && !feedback.correct
-                    ? "wrong-answer"
-                    : ""
-                  : selectedOption === index
-                  ? "pulse"
-                  : ""
-              }`}
-              sx={{
-                mb: 2,
-                cursor:
-                  feedback.show || isSubmitting || isTimeUp
-                    ? "default"
-                    : "pointer",
-                backgroundColor: feedback.show
-                  ? feedback.correctAnswer === index
-                    ? "rgba(76, 175, 80, 0.3)"
-                    : selectedOption === index && !feedback.correct
-                    ? "rgba(244, 67, 54, 0.3)"
-                    : "rgba(255, 255, 255, 0.05)"
-                  : selectedOption === index
-                  ? "rgba(0, 212, 255, 0.2)"
-                  : "rgba(255, 255, 255, 0.1)",
-                border: feedback.show
-                  ? feedback.correctAnswer === index
-                    ? "2px solid #4caf50"
-                    : selectedOption === index && !feedback.correct
-                    ? "2px solid #f44336"
-                    : "1px solid rgba(255, 255, 255, 0.2)"
-                  : selectedOption === index
-                  ? "2px solid #00d4ff"
-                  : "1px solid rgba(255, 255, 255, 0.2)",
-                transition: "all 0.3s ease",
-                opacity: isTimeUp && !feedback.show ? 0.6 : 1,
-              }}
-              onClick={() => handleOptionSelect(index)}
-            >
-              <CardContent sx={{ py: 2 }}>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Typography
-                    sx={{
-                      minWidth: 24,
-                      height: 24,
-                      borderRadius: "50%",
-                      backgroundColor: feedback.show
-                        ? feedback.correctAnswer === index
-                          ? "#4caf50"
-                          : selectedOption === index && !feedback.correct
-                          ? "#f44336"
-                          : "rgba(255, 255, 255, 0.2)"
-                        : selectedOption === index
-                        ? "#00d4ff"
-                        : "rgba(255, 255, 255, 0.2)",
-                      color: "white",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "0.875rem",
-                      fontWeight: "bold",
-                      mr: 2,
-                    }}
-                  >
-                    {String.fromCharCode(65 + index)}
-                  </Typography>
-                  <Typography variant="body1" sx={{ flexGrow: 1 }}>
-                    {option}
-                  </Typography>
-                  {feedback.show && feedback.correctAnswer === index && (
-                    <CheckCircle sx={{ color: "#4caf50", ml: 1 }} />
-                  )}
-                  {feedback.show &&
-                    selectedOption === index &&
-                    !feedback.correct &&
-                    feedback.correctAnswer !== index && (
-                      <Cancel sx={{ color: "#f44336", ml: 1 }} />
-                    )}
-                </Box>
-              </CardContent>
-            </Card>
-          ))}
-        </Box>
+        {/* Options - Refactored to Component */}
+        <QuizOptions
+          options={currentQuestion.options}
+          selectedOption={selectedOption}
+          feedbackShow={feedback.show}
+          feedbackCorrect={feedback.correct}
+          correctAnswer={feedback.correctAnswer}
+          isSubmitting={isSubmitting}
+          isTimeUp={isTimeUp}
+          onOptionSelect={handleOptionSelect}
+        />
 
         {/* Error */}
         {error && (
@@ -509,81 +379,27 @@ const QuizScreen: React.FC = () => {
           </Alert>
         )}
 
-        {/* Feedback */}
-        {feedback.show && (
-          <Alert
-            severity={feedback.correct ? "success" : "error"}
-            sx={{ mb: 3 }}
-            icon={feedback.correct ? <CheckCircle /> : <Cancel />}
-          >
-            <Typography variant="body1" sx={{ fontWeight: "bold" }}>
-              {feedback.correct ? "🎉 Correct! Great job!" : "❌ Incorrect!"}
-            </Typography>
-            {feedback.message && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                {feedback.message}
-              </Typography>
-            )}
-            {!feedback.correct && feedback.correctAnswer !== undefined && (
-              <Typography variant="body2" sx={{ mt: 1, fontStyle: "italic" }}>
-                The correct answer was:{" "}
-                {String.fromCharCode(65 + feedback.correctAnswer)}){" "}
-                {currentQuestion.options[feedback.correctAnswer]}
-              </Typography>
-            )}
-          </Alert>
-        )}
+        {/* Feedback - Refactored to Component with improved UX */}
+        <QuizFeedback
+          show={feedback.show}
+          correct={feedback.correct}
+          message={feedback.message}
+          showCorrectAnswer={false} // Set to false for better UX
+          correctAnswer={feedback.correctAnswer}
+          options={currentQuestion.options}
+        />
 
-        {/* Action Buttons */}
-        <Box sx={{ display: "flex", justifyContent: "center", gap: 2 }}>
-          {!feedback.show ? (
-            <Button
-              variant="contained"
-              size="large"
-              onClick={() => handleSubmitAnswer()}
-              disabled={selectedOption === null || isSubmitting || isTimeUp}
-              className="glass-button"
-              sx={{
-                py: 1.5,
-                px: 4,
-                background: isTimeUp
-                  ? "rgba(158, 158, 158, 0.6)"
-                  : "linear-gradient(45deg, #00d4ff, #ff6b35)",
-                "&:hover": {
-                  background: isTimeUp
-                    ? "rgba(158, 158, 158, 0.6)"
-                    : "linear-gradient(45deg, #00b8e6, #e55a2b)",
-                },
-              }}
-            >
-              {isSubmitting
-                ? "Submitting..."
-                : isTimeUp
-                ? "Time's Up!"
-                : "Submit Answer"}
-            </Button>
-          ) : (
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleNextQuestion}
-              endIcon={<NavigateNext />}
-              className="glass-button"
-              sx={{
-                py: 1.5,
-                px: 4,
-                background: "linear-gradient(45deg, #00d4ff, #ff6b35)",
-                "&:hover": {
-                  background: "linear-gradient(45deg, #00b8e6, #e55a2b)",
-                },
-              }}
-            >
-              {state.currentQuestionIndex < state.questions.length - 1
-                ? "Next Question"
-                : "View Results"}
-            </Button>
-          )}
-        </Box>
+        {/* Action Buttons - Refactored to Component */}
+        <QuizActions
+          feedbackShow={feedback.show}
+          selectedOption={selectedOption}
+          isSubmitting={isSubmitting}
+          isTimeUp={isTimeUp}
+          currentQuestionIndex={state.currentQuestionIndex}
+          totalQuestions={state.questions.length}
+          onSubmitAnswer={() => handleSubmitAnswer()}
+          onNextQuestion={handleNextQuestion}
+        />
       </Paper>
 
       {/* Score Animation Overlay */}
