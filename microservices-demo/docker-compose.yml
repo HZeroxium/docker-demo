@@ -202,10 +202,12 @@ services:
       - "LOG_LEVEL=info"
     volumes:
       - ./observability/logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - ./observability/logstash/config:/usr/share/logstash/config:rw
+      - ./observability/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:rw
+      - ./observability/logstash/config/jvm.options:/usr/share/logstash/config/jvm.options:ro
+      - ./observability/logstash/config/log4j2.properties:/usr/share/logstash/config/log4j2.properties:ro
       - ./observability/logstash/templates:/usr/share/logstash/templates:ro
       - logstash_data:/usr/share/logstash/data
-      - /var/log/logstash:/var/log/logstash:rw
+      - logstash_logs:/usr/share/logstash/logs
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -343,4 +345,5 @@ volumes:
   prometheus_data:
   grafana_data:
   logstash_data:
+  logstash_logs:
   filebeat_data:

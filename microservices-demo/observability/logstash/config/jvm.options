@@ -1,0 +1,67 @@
+## JVM configuration
+
+# Xms represents the initial size of total heap space
+# Xmx represents the maximum size of total heap space
+-Xms1g
+-Xmx1g
+
+################################################################
+## Expert settings
+################################################################
+
+# G1GC Configuration
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=250
+-XX:G1HeapRegionSize=16m
+
+# Disable explicit GC
+-XX:+DisableExplicitGC
+
+# Pre-touch memory pages used by the JVM during initialization
+-XX:+AlwaysPreTouch
+
+# Try to reduce the chances of the OS swapping out the JVM
+-Xss1m
+
+# Fixed GC logging configuration for JDK bundled with Logstash 8.17.7
+-Xlog:gc*:logs/gc.log:time,level,tags:filecount=32,filesize=64M
+
+# JDK 17+ options (compatible with Logstash 8.17.7)
+--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED
+--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED
+--add-opens=java.base/java.security=ALL-UNNAMED
+--add-opens=java.base/java.io=ALL-UNNAMED
+--add-opens=java.base/java.nio.channels=ALL-UNNAMED
+--add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+--add-opens=java.management/sun.management=ALL-UNNAMED
+
+# Disable netty allocator max order warning
+-Dio.netty.allocator.maxOrder=11
+
+# JRuby options
+-Djruby.regexp.interruptible=true
+-Djdk.io.File.enableADS=true
+
+# Container support
+-XX:+UseContainerSupport
+-XX:MaxRAMPercentage=75.0
+
+# CGroup settings for container environments
+-Dls.cgroup.cpuacct.path.override=/
+-Dls.cgroup.cpu.path.override=/
+-Dio.netty.allocator.maxOrder=11
+
+# JRuby options
+-Djruby.regexp.interruptible=true
+-Djdk.io.File.enableADS=true
+
+# CGroup settings for container environments
+-Dls.cgroup.cpuacct.path.override=/
+-Dls.cgroup.cpu.path.override=/
+
+# JVM container detection and memory limits
+-XX:+UseContainerSupport
+-XX:MaxRAMPercentage=75.0
