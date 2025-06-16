@@ -338,12 +338,12 @@ const QuizScreen: React.FC = () => {
         />
 
         {/* Timer Component with enhanced debug info */}
-        {/* <QuestionTimer
+        <QuestionTimer
           timeRemaining={timeRemaining}
           totalTime={currentQuestion?.time_limit || 30}
           isActive={isActive && !feedback.show}
           progress={timerProgress}
-        /> */}
+        />
 
         {/* Debug Timer Info - Commented out for production */}
         {/* 

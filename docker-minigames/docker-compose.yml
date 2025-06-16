@@ -1,0 +1,53 @@
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: docker-quiz-backend
+    restart: unless-stopped
+    environment:
+      # MongoDB connection configuration
+      - MONGODB_URL=${MONGODB_URL:-mongodb://localhost:27017/docker_quiz_game}
+      - DB_NAME=${DB_NAME:-docker_quiz_game}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Additional MongoDB settings for Atlas compatibility
+      - MONGODB_TIMEOUT=${MONGODB_TIMEOUT:-10000}
+      - MONGODB_POOL_SIZE=${MONGODB_POOL_SIZE:-10}
+    ports:
+      - "8000:8000"
+    networks:
+      - quiz-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: docker-quiz-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - quiz-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Networks
+networks:
+  quiz-network:
+    driver: bridge
+    name: docker-quiz-network

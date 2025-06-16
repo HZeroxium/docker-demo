@@ -15,9 +15,6 @@ const QuizFeedback: React.FC<QuizFeedbackProps> = ({
   show,
   correct,
   message,
-  showCorrectAnswer = false, // Default to false for better UX
-  correctAnswer,
-  options,
 }) => {
   if (!show) return null;
 

@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from app.routers import game, questions, leaderboard
 from app.core.websocket_manager import WebSocketManager
 from app.database.connection import connect_to_mongo, close_mongo_connection
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -26,11 +27,26 @@ websocket_manager = WebSocketManager(sio)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting Docker Quiz Game API...")
+
+    # Log environment information (without sensitive data)
+    mongodb_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017/docker_quiz_game")
+    db_name = os.getenv("DB_NAME", "docker_quiz_game")
+    environment = os.getenv("ENVIRONMENT", "development")
+
+    logger.info(f"🌍 Environment: {environment}")
+    logger.info(f"🗄️ Database Name: {db_name}")
+    logger.info(
+        f"🔗 MongoDB Type: {'Atlas' if 'mongodb.net' in mongodb_url else 'Local/Remote'}"
+    )
+
     try:
         await connect_to_mongo()
         logger.info("✅ Server ready!")
     except Exception as e:
         logger.error(f"❌ Startup failed: {e}")
+        logger.error(
+            "💡 Please check your MongoDB connection string and database configuration"
+        )
         raise
 
     yield
@@ -45,7 +61,12 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI app with lifespan
-app = FastAPI(title="Docker Quiz Game API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="Docker Quiz Game API",
+    version="1.0.0",
+    lifespan=lifespan,
+    description="A quiz game API for learning Docker concepts",
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -67,12 +88,21 @@ app.include_router(leaderboard.router, prefix="/api", tags=["leaderboard"])
 
 @app.get("/")
 async def root():
-    return {"message": "Docker Quiz Game API", "status": "running"}
+    return {
+        "message": "Docker Quiz Game API",
+        "status": "running",
+        "version": "1.0.0",
+        "environment": os.getenv("ENVIRONMENT", "development"),
+    }
 
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "docker-quiz-api"}
+    return {
+        "status": "healthy",
+        "service": "docker-quiz-api",
+        "database": "connected" if hasattr(app.state, "db") else "unknown",
+    }
 
 
 # Mount Socket.IO

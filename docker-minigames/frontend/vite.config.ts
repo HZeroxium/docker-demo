@@ -21,5 +21,24 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Separate vendor chunks for better caching
+          "react-vendor": ["react", "react-dom"],
+          "mui-vendor": [
+            "@mui/material",
+            "@mui/icons-material",
+            "@emotion/react",
+            "@emotion/styled",
+          ],
+          "router-vendor": ["react-router-dom"],
+          "socket-vendor": ["socket.io-client"],
+          "utils-vendor": ["axios"],
+        },
+      },
+    },
+    // Increase chunk size warning limit to 600kb since MUI is inherently large
+    chunkSizeWarningLimit: 600,
   },
 });
