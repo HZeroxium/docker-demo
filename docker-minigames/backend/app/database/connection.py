@@ -3,6 +3,7 @@ from typing import Optional
 import os
 import logging
 from urllib.parse import urlparse
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -59,77 +60,98 @@ def extract_database_name_from_url(
 
 async def connect_to_mongo():
     """Create database connection with enhanced external MongoDB support"""
-    try:
-        # Priority: Environment variable > Default localhost
-        mongodb_url = os.getenv(
-            "MONGODB_URL", "mongodb://localhost:27017/docker_quiz_game"
-        )
+    max_retries = 3
+    retry_delay = 2
 
-        # Get database name from environment or extract from URL
-        db_name = os.getenv("DB_NAME")
+    for attempt in range(max_retries):
+        try:
+            # Priority: Environment variable > Default localhost
+            mongodb_url = os.getenv(
+                "MONGODB_URL", "mongodb://localhost:27017/docker_quiz_game"
+            )
 
-        if not db_name or not db_name.strip():
-            # Extract database name from MongoDB URL
-            db_name = extract_database_name_from_url(mongodb_url)
+            # Get database name from environment or extract from URL
+            db_name = os.getenv("DB_NAME")
 
-        # Final validation - ensure db_name is not empty
-        if not db_name or not db_name.strip():
-            db_name = "docker_quiz_game"
-            logger.warning(f"Using fallback database name: {db_name}")
+            if not db_name or not db_name.strip():
+                # Extract database name from MongoDB URL
+                db_name = extract_database_name_from_url(mongodb_url)
 
-        logger.info(f"🔄 Attempting to connect to MongoDB...")
-        logger.info(f"📍 Database: {db_name}")
-        logger.info(
-            f"🔗 Connection type: {'Atlas' if 'mongodb.net' in mongodb_url else 'Local/Remote'}"
-        )
+            # Final validation - ensure db_name is not empty
+            if not db_name or not db_name.strip():
+                db_name = "docker_quiz_game"
+                logger.warning(f"Using fallback database name: {db_name}")
 
-        # Enhanced connection options for external MongoDB
-        connection_options = {
-            "serverSelectionTimeoutMS": 5000,  # 5 second timeout
-            "connectTimeoutMS": 10000,  # 10 second connection timeout
-            "socketTimeoutMS": 10000,  # 10 second socket timeout
-            "maxPoolSize": 10,  # Connection pool size
-            "minPoolSize": 1,  # Minimum connections
-            "maxIdleTimeMS": 30000,  # Max idle time
-            "retryWrites": True,  # Enable retry writes
-        }
+            logger.info(
+                f"🔄 Attempting to connect to MongoDB (attempt {attempt + 1}/{max_retries})..."
+            )
+            logger.info(f"📍 Database: {db_name}")
+            logger.info(
+                f"🔗 Connection type: {'Atlas' if 'mongodb.net' in mongodb_url else 'Local/Remote'}"
+            )
 
-        # # Additional options for MongoDB Atlas
-        # if "mongodb.net" in mongodb_url or "mongodb+srv" in mongodb_url:
-        #     connection_options.update(
-        #         {
-        #             "ssl": True,
-        #             "ssl_cert_reqs": "CERT_NONE",  # For Atlas compatibility
-        #             "authSource": "admin",
-        #         }
-        #     )
+            # Enhanced connection options for external MongoDB
+            connection_options = {
+                "serverSelectionTimeoutMS": 5000,  # 5 second timeout
+                "connectTimeoutMS": 10000,  # 10 second connection timeout
+                "socketTimeoutMS": 10000,  # 10 second socket timeout
+                "maxPoolSize": 10,  # Connection pool size
+                "minPoolSize": 1,  # Minimum connections
+                "maxIdleTimeMS": 30000,  # Max idle time
+                "retryWrites": True,  # Enable retry writes
+            }
 
-        db.client = AsyncIOMotorClient(mongodb_url, **connection_options)
+            # Additional options for MongoDB Atlas
+            # if "mongodb.net" in mongodb_url or "mongodb+srv" in mongodb_url:
+            #     connection_options.update(
+            #         {
+            #             "ssl": True,
+            #             "ssl_cert_reqs": "CERT_NONE",  # For Atlas compatibility
+            #             "authSource": "admin",
+            #         }
+            #     )
 
-        # Validate database name one more time before assignment
-        if not db_name or not isinstance(db_name, str) or not db_name.strip():
-            raise ValueError("Database name is invalid or empty")
+            db.client = AsyncIOMotorClient(mongodb_url, **connection_options)
 
-        db.database = db.client[db_name.strip()]
+            # Validate database name one more time before assignment
+            if not db_name or not isinstance(db_name, str) or not db_name.strip():
+                raise ValueError("Database name is invalid or empty")
 
-        # Test the connection with ping
-        await db.client.admin.command("ping")
+            db.database = db.client[db_name.strip()]
 
-        # Verify database access
-        collections = await db.database.list_collection_names()
-        logger.info(f"✅ Successfully connected to MongoDB")
-        logger.info(f"📊 Database: {db_name}")
-        logger.info(f"📋 Available collections: {len(collections)}")
+            # Test the connection with ping
+            await db.client.admin.command("ping")
 
-    except Exception as e:
-        logger.error(f"❌ Failed to connect to MongoDB: {e}")
-        logger.error(
-            f"🔗 Connection URL: {mongodb_url.split('@')[0] if '@' in mongodb_url else mongodb_url}"
-        )
-        logger.error(
-            f"🗄️ Database name attempted: {db_name if 'db_name' in locals() else 'Not determined'}"
-        )
-        raise ConnectionError(f"MongoDB connection failed: {str(e)}")
+            # Verify database access
+            collections = await db.database.list_collection_names()
+            logger.info(f"✅ Successfully connected to MongoDB")
+            logger.info(f"📊 Database: {db_name}")
+            logger.info(f"📋 Available collections: {len(collections)}")
+            return  # Success, exit retry loop
+
+        except Exception as e:
+            logger.error(
+                f"❌ Failed to connect to MongoDB (attempt {attempt + 1}/{max_retries}): {e}"
+            )
+            logger.error(
+                f"🔗 Connection URL: {mongodb_url.split('@')[0] if '@' in mongodb_url else mongodb_url}"
+            )
+            logger.error(
+                f"🗄️ Database name attempted: {db_name if 'db_name' in locals() else 'Not determined'}"
+            )
+
+            if attempt < max_retries - 1:
+                logger.info(f"⏳ Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                # Last attempt failed
+                error_msg = (
+                    f"MongoDB connection failed after {max_retries} attempts: {str(e)}"
+                )
+                if "Connection refused" in str(e):
+                    error_msg += "\n💡 Hint: If using Docker, make sure MongoDB service is running and use service name (e.g., 'mongodb' instead of 'localhost')"
+                raise ConnectionError(error_msg)
 
 
 async def close_mongo_connection():

@@ -1,5 +1,31 @@
 services:
-  # Backend API
+  # MongoDB Container (only active when using local profile)
+  mongodb:
+    image: mongo:latest
+    container_name: docker-quiz-mongodb
+    restart: unless-stopped
+    profiles: ["local", "local-dev"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      MONGO_INITDB_DATABASE: ${MONGO_INIT_DB:-docker_quiz_game}
+      # Pass environment for init script
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - quiz-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Backend API (works with both local and cloud MongoDB)
   backend:
     build:
       context: ./backend
@@ -8,16 +34,25 @@ services:
     restart: unless-stopped
     environment:
       # MongoDB connection configuration
-      - MONGODB_URL=${MONGODB_URL:-mongodb://localhost:27017/docker_quiz_game}
+      - MONGODB_URL=${MONGODB_URL}
       - DB_NAME=${DB_NAME:-docker_quiz_game}
       - ENVIRONMENT=${ENVIRONMENT:-production}
-      # Additional MongoDB settings for Atlas compatibility
+      # Additional MongoDB settings
       - MONGODB_TIMEOUT=${MONGODB_TIMEOUT:-10000}
       - MONGODB_POOL_SIZE=${MONGODB_POOL_SIZE:-10}
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     networks:
       - quiz-network
+    # Conditional dependencies based on profile
+    depends_on:
+      mongodb:
+        condition: service_healthy
+        required: false
+    profiles:
+      - local
+      - local-dev
+      - cloud
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -32,15 +67,22 @@ services:
       dockerfile: Dockerfile
     container_name: docker-quiz-frontend
     restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:8000}
+      - REACT_APP_ENVIRONMENT=${ENVIRONMENT:-production}
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - quiz-network
+    profiles:
+      - local
+      - local-dev
+      - cloud
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -51,3 +93,9 @@ networks:
   quiz-network:
     driver: bridge
     name: docker-quiz-network
+
+# Volumes (only used when MongoDB container is active)
+volumes:
+  mongodb_data:
+    driver: local
+    name: docker-quiz-mongodb-data
