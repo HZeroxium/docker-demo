@@ -4,6 +4,7 @@ from app.models.question import AnswerSubmission, AnswerResponse
 from app.services.player_service import player_service
 from app.services.question_service import question_service
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -93,8 +94,17 @@ async def submit_answer(answer: AnswerSubmission):
                     }
                 )
 
+                # Convert PlayerResponse objects to dictionaries with proper datetime handling
+                leaderboard_data = []
+                for player in leaderboard:
+                    player_dict = player.model_dump()
+                    # Ensure datetime is properly serialized
+                    if isinstance(player_dict.get("joined_at"), datetime):
+                        player_dict["joined_at"] = player_dict["joined_at"].isoformat()
+                    leaderboard_data.append(player_dict)
+
                 await websocket_manager.emit_leaderboard_updated(
-                    {"leaderboard": [player.model_dump() for player in leaderboard]}
+                    {"leaderboard": leaderboard_data}
                 )
                 logger.info("WebSocket events emitted successfully")
             except Exception as ws_error:
@@ -108,7 +118,9 @@ async def submit_answer(answer: AnswerSubmission):
             time_taken=answer.time_taken,
             speed_bonus=speed_bonus,
             message=f"{'Correct!' if is_correct else 'Incorrect.'} You earned {points_earned} points.",
-            correct_answer=question.correct_answer if not is_correct else None,  # Only show if wrong
+            correct_answer=(
+                question.correct_answer if not is_correct else None
+            ),  # Only show if wrong
         )
 
         logger.info(f"Answer processed successfully: {response}")
@@ -118,10 +130,6 @@ async def submit_answer(answer: AnswerSubmission):
         raise
     except Exception as e:
         logger.error(f"Error in submit_answer: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Failed to submit answer: {str(e)}"
-        )
-        logger.error(f"Error in submit_answer: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to submit answer: {str(e)}"
         )

@@ -187,7 +187,12 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
     socket.on("leaderboard_updated", (data: any) => {
       console.log("Leaderboard updated event:", data);
       if (data.leaderboard && Array.isArray(data.leaderboard)) {
-        dispatch({ type: "UPDATE_LEADERBOARD", payload: data.leaderboard });
+        // Convert joined_at strings back to Date objects if needed
+        const processedLeaderboard = data.leaderboard.map((player: any) => ({
+          ...player,
+          joined_at: player.joined_at ? new Date(player.joined_at) : undefined,
+        }));
+        dispatch({ type: "UPDATE_LEADERBOARD", payload: processedLeaderboard });
       }
     });
 

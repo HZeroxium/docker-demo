@@ -1,16 +1,16 @@
 # =============================================================================
 # ENVIRONMENT & SECRETS
 # =============================================================================
-.env
-.env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
-*.env
-.env.*
-!.env.example
-!.env.template
+# .env
+# .env.local
+# .env.*.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
+# *.env
+# .env.*
+# !.env.example
+# !.env.template
 
 # Docker secrets
 docker-compose.override.yml.local
@@ -105,7 +105,7 @@ frontend/out/
 # DOCKER & CONTAINERS
 # =============================================================================
 # Exclude override files (except example)
-docker-compose.override.yml
+# docker-compose.override.yml
 !docker-compose.override.yml.example
 
 # Docker volumes and data
