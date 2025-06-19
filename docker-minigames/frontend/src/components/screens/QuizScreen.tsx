@@ -20,17 +20,23 @@ import QuizQuestion from "../quiz/QuizQuestion";
 import QuizOptions from "../quiz/QuizOptions";
 import QuizFeedback from "../quiz/QuizFeedback";
 import QuizActions from "../quiz/QuizActions";
-// import DebugTimerInfo from "../quiz/DebugTimerInfo"; // Commented out for production
+
+// Import shuffling utilities
+import {
+  createShuffleMapping,
+  mapShuffledToOriginal,
+  type ShuffleMapping,
+} from "../../utils/shuffleUtils";
 
 const QuizScreen: React.FC = () => {
   const { state, dispatch } = useGame();
   const navigate = useNavigate();
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null); // SHUFFLED index
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     show: boolean;
     correct: boolean;
-    correctAnswer?: number;
+    correctAnswer?: number; // ORIGINAL index from backend
     message?: string;
   }>({
     show: false,
@@ -42,6 +48,11 @@ const QuizScreen: React.FC = () => {
     null
   );
   const [questionStartTime, setQuestionStartTime] = useState<number | null>(
+    null
+  );
+
+  // NEW: Shuffle mapping state
+  const [shuffleMapping, setShuffleMapping] = useState<ShuffleMapping | null>(
     null
   );
 
@@ -60,7 +71,7 @@ const QuizScreen: React.FC = () => {
     }
 
     console.log("⏰ Time's up! Auto-submitting...");
-    const optionToSubmit = selectedOption !== null ? selectedOption : 0;
+    const optionToSubmit = selectedOption !== null ? selectedOption : 0; // This is shuffled index
     await handleSubmitAnswer(true, optionToSubmit);
   }, [feedback.show, isSubmitting, selectedOption]);
 
@@ -86,7 +97,7 @@ const QuizScreen: React.FC = () => {
     totalTime: currentQuestion?.time_limit || 30,
     onTimeUp: handleTimeUp,
     onTick: handleTick,
-    autoStart: true, // Enable auto-start for proper timer functionality
+    autoStart: true,
   });
 
   useEffect(() => {
@@ -115,14 +126,29 @@ const QuizScreen: React.FC = () => {
     }
   };
 
-  // FIXED: Simplified question change effect with proper timer management
+  // ENHANCED: Question change effect with shuffle mapping generation
   useEffect(() => {
     if (currentQuestion && currentQuestion.id !== currentQuestionId) {
       console.log(`📝 New question loaded: ${currentQuestion.id}`);
 
+      // Generate shuffle mapping for this question
+      const newShuffleMapping = createShuffleMapping(
+        currentQuestion.options,
+        currentQuestion.id
+      );
+
+      console.log(
+        `🔀 Generated shuffle mapping for question ${currentQuestion.id}:`,
+        {
+          original: currentQuestion.options,
+          shuffled: newShuffleMapping.shuffledOptions.map((opt) => opt.text),
+        }
+      );
+
       // Reset all question-related state
       setCurrentQuestionId(currentQuestion.id);
-      setSelectedOption(null);
+      setShuffleMapping(newShuffleMapping);
+      setSelectedOption(null); // This will be shuffled index
       setFeedback({ show: false, correct: false });
       setError("");
       setIsSubmitting(false);
@@ -149,28 +175,44 @@ const QuizScreen: React.FC = () => {
   }, [state.lastScoreUpdate, feedback.show]);
 
   const handleOptionSelect = useCallback(
-    (optionIndex: number) => {
+    (shuffledIndex: number) => {
       if (!feedback.show && !isSubmitting && !isTimeUp) {
-        console.log(`✅ Option selected: ${optionIndex}`);
-        setSelectedOption(optionIndex);
+        console.log(`✅ Shuffled option selected: ${shuffledIndex}`);
+        setSelectedOption(shuffledIndex); // Store shuffled index
       }
     },
     [feedback.show, isSubmitting, isTimeUp]
   );
 
-  // FIXED: Submit answer with proper timing calculation
+  // ENHANCED: Submit answer with shuffle mapping conversion
   const handleSubmitAnswer = useCallback(
-    async (isTimeout: boolean = false, optionOverride?: number) => {
-      const optionToSubmit = optionOverride ?? selectedOption;
+    async (isTimeout: boolean = false, shuffledOptionOverride?: number) => {
+      const shuffledOption = shuffledOptionOverride ?? selectedOption;
 
-      if (optionToSubmit === null || !state.currentPlayer || !currentQuestion) {
+      if (
+        shuffledOption === null ||
+        !state.currentPlayer ||
+        !currentQuestion ||
+        !shuffleMapping
+      ) {
         console.error("Cannot submit: missing data", {
-          optionToSubmit,
+          shuffledOption,
           currentPlayer: !!state.currentPlayer,
           currentQuestion: !!currentQuestion,
+          shuffleMapping: !!shuffleMapping,
         });
         return;
       }
+
+      // Convert shuffled index to original index for backend
+      const originalOption = mapShuffledToOriginal(
+        shuffledOption,
+        shuffleMapping
+      );
+
+      console.log(
+        `🔄 Converting shuffled option ${shuffledOption} to original option ${originalOption}`
+      );
 
       // Prevent double submission
       if (isSubmitting) {
@@ -212,7 +254,8 @@ const QuizScreen: React.FC = () => {
         console.log("📤 Submitting answer:", {
           player_id: state.currentPlayer.id,
           question_id: currentQuestion.id,
-          selected_option: optionToSubmit,
+          selected_option: originalOption, // Send ORIGINAL index to backend
+          shuffled_option: shuffledOption, // For debugging
           time_taken: timeTaken,
           isTimeout,
         });
@@ -220,7 +263,7 @@ const QuizScreen: React.FC = () => {
         const response = await gameApi.submitAnswer({
           player_id: state.currentPlayer.id,
           question_id: currentQuestion.id,
-          selected_option: optionToSubmit,
+          selected_option: originalOption, // Backend expects original index
           time_taken: timeTaken,
         });
 
@@ -229,7 +272,7 @@ const QuizScreen: React.FC = () => {
         setFeedback({
           show: true,
           correct: response.is_correct,
-          correctAnswer: response.correct_answer,
+          correctAnswer: response.correct_answer, // This is original index from backend
           message: isTimeout ? "⏰ Time's up!" : response.message,
         });
 
@@ -266,6 +309,7 @@ const QuizScreen: React.FC = () => {
       selectedOption,
       state.currentPlayer,
       currentQuestion,
+      shuffleMapping,
       stopTimer,
       getElapsedTime,
       dispatch,
@@ -279,8 +323,9 @@ const QuizScreen: React.FC = () => {
     setShowScoreAnimation(false);
     dispatch({ type: "CLEAR_SCORE_UPDATE" });
 
-    // Clear question start time
+    // Clear question start time and shuffle mapping
     setQuestionStartTime(null);
+    setShuffleMapping(null);
 
     if (state.currentQuestionIndex < state.questions.length - 1) {
       dispatch({ type: "NEXT_QUESTION" });
@@ -313,12 +358,14 @@ const QuizScreen: React.FC = () => {
     );
   }
 
-  if (!currentQuestion) {
+  if (!currentQuestion || !shuffleMapping) {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Paper className="glass-card" sx={{ p: 4, textAlign: "center" }}>
           <Typography variant="h6" color="error">
-            No questions available
+            {!currentQuestion
+              ? "No questions available"
+              : "Loading question options..."}
           </Typography>
           <Button onClick={() => navigate("/")}>Back to Start</Button>
         </Paper>
@@ -329,7 +376,7 @@ const QuizScreen: React.FC = () => {
   return (
     <Container maxWidth="md" sx={{ mt: 2 }}>
       <Paper className="glass-card slide-up" sx={{ p: 4 }}>
-        {/* Progress Header - Refactored to Component */}
+        {/* Progress Header */}
         <QuizProgress
           currentQuestionIndex={state.currentQuestionIndex}
           totalQuestions={state.questions.length}
@@ -337,7 +384,7 @@ const QuizScreen: React.FC = () => {
           progress={progress}
         />
 
-        {/* Timer Component with enhanced debug info */}
+        {/* Timer Component */}
         <QuestionTimer
           timeRemaining={timeRemaining}
           totalTime={currentQuestion?.time_limit || 30}
@@ -345,31 +392,20 @@ const QuizScreen: React.FC = () => {
           progress={timerProgress}
         />
 
-        {/* Debug Timer Info - Commented out for production */}
-        {/* 
-        <DebugTimerInfo
-          isActive={isActive}
-          timeRemaining={timeRemaining}
-          timerProgress={timerProgress}
-          questionStartTime={questionStartTime}
-          feedbackShow={feedback.show}
-          isTimeUp={isTimeUp}
-        />
-        */}
-
-        {/* Question - Refactored to Component */}
+        {/* Question */}
         <QuizQuestion question={currentQuestion.question} />
 
-        {/* Options - Refactored to Component */}
+        {/* ENHANCED: Options with shuffle mapping */}
         <QuizOptions
           options={currentQuestion.options}
-          selectedOption={selectedOption}
+          selectedOption={selectedOption} // Shuffled index
           feedbackShow={feedback.show}
           feedbackCorrect={feedback.correct}
-          correctAnswer={feedback.correctAnswer}
+          correctAnswer={feedback.correctAnswer} // Original index from backend
           isSubmitting={isSubmitting}
           isTimeUp={isTimeUp}
-          onOptionSelect={handleOptionSelect}
+          shuffleMapping={shuffleMapping} // Pass shuffle mapping
+          onOptionSelect={handleOptionSelect} // Receives shuffled index
         />
 
         {/* Error */}
@@ -379,17 +415,17 @@ const QuizScreen: React.FC = () => {
           </Alert>
         )}
 
-        {/* Feedback - Refactored to Component with improved UX */}
+        {/* Feedback */}
         <QuizFeedback
           show={feedback.show}
           correct={feedback.correct}
           message={feedback.message}
-          showCorrectAnswer={false} // Set to false for better UX
+          showCorrectAnswer={false}
           correctAnswer={feedback.correctAnswer}
           options={currentQuestion.options}
         />
 
-        {/* Action Buttons - Refactored to Component */}
+        {/* Action Buttons */}
         <QuizActions
           feedbackShow={feedback.show}
           selectedOption={selectedOption}

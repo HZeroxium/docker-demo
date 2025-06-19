@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import socketio
 import logging
 from contextlib import asynccontextmanager
-from app.routers import game, questions, leaderboard
+from app.routers import game, questions, leaderboard, admin
 from app.core.websocket_manager import WebSocketManager
 from app.database.connection import connect_to_mongo, close_mongo_connection
+from app.core.cache import cache_service
+from app.core.config import settings
 import os
 
 # Configure logging
@@ -40,7 +42,17 @@ async def lifespan(app: FastAPI):
     )
 
     try:
+        # Connect to MongoDB
         await connect_to_mongo()
+        logger.info("✅ MongoDB connection established!")
+
+        # Connect to Redis
+        await cache_service.connect()
+        if cache_service.is_connected:
+            logger.info("✅ Redis cache connection established!")
+        else:
+            logger.info("⚠️ Redis cache not available - continuing without caching")
+
         logger.info("✅ Server ready!")
     except Exception as e:
         logger.error(f"❌ Startup failed: {e}")
@@ -55,6 +67,7 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Shutting down...")
     try:
         await close_mongo_connection()
+        await cache_service.disconnect()
         logger.info("✅ Shutdown complete!")
     except Exception as e:
         logger.error(f"❌ Shutdown error: {e}")
@@ -84,6 +97,7 @@ game.set_websocket_manager(websocket_manager)
 app.include_router(game.router, prefix="/api", tags=["game"])
 app.include_router(questions.router, prefix="/api", tags=["questions"])
 app.include_router(leaderboard.router, prefix="/api", tags=["leaderboard"])
+app.include_router(admin.router, prefix="/api", tags=["admin"])
 
 
 @app.get("/")
@@ -93,6 +107,7 @@ async def root():
         "status": "running",
         "version": "1.0.0",
         "environment": os.getenv("ENVIRONMENT", "development"),
+        "cache_status": "connected" if cache_service.is_connected else "disconnected",
     }
 
 
@@ -102,6 +117,7 @@ async def health():
         "status": "healthy",
         "service": "docker-quiz-api",
         "database": "connected" if hasattr(app.state, "db") else "unknown",
+        "cache": "connected" if cache_service.is_connected else "disconnected",
     }
 
 

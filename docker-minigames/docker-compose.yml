@@ -25,7 +25,27 @@ services:
       retries: 3
       start_period: 40s
 
-  # Backend API (works with both local and cloud MongoDB)
+  # Redis Container (only active when using local profile)
+  redis:
+    image: redis:7.4.2
+    container_name: docker-quiz-redis
+    restart: unless-stopped
+    profiles: ["local", "local-dev"]
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password_123}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - quiz-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Backend API (works with both local and cloud MongoDB/Redis)
   backend:
     build:
       context: ./backend
@@ -40,6 +60,17 @@ services:
       # Additional MongoDB settings
       - MONGODB_TIMEOUT=${MONGODB_TIMEOUT:-10000}
       - MONGODB_POOL_SIZE=${MONGODB_POOL_SIZE:-10}
+      # Redis configuration
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_password_123}
+      - REDIS_DB=${REDIS_DB:-0}
+      - REDIS_URL=${REDIS_URL}
+      # Cache configuration
+      - CACHE_TTL=${CACHE_TTL:-3600}
+      - QUESTIONS_CACHE_TTL=${QUESTIONS_CACHE_TTL:-7200}
+      # Admin configuration
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-your-secure-admin-key-here}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     networks:
@@ -47,6 +78,9 @@ services:
     # Conditional dependencies based on profile
     depends_on:
       mongodb:
+        condition: service_healthy
+        required: false
+      redis:
         condition: service_healthy
         required: false
     profiles:
@@ -94,8 +128,11 @@ networks:
     driver: bridge
     name: docker-quiz-network
 
-# Volumes (only used when MongoDB container is active)
+# Volumes (only used when MongoDB/Redis containers are active)
 volumes:
   mongodb_data:
     driver: local
     name: docker-quiz-mongodb-data
+  redis_data:
+    driver: local
+    name: docker-quiz-redis-data
