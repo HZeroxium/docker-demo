@@ -8,6 +8,187 @@ import math
 logger = logging.getLogger(__name__)
 
 
+SAMPLE_QUESTIONS = [
+    {
+        "question": "What is Docker?",
+        "options": [
+            "A programming language",
+            "A containerization platform",
+            "A database management system",
+            "A web framework",
+        ],
+        "correct_answer": 1,
+        "time_limit": 20,
+        "max_points": 100,
+    },
+    {
+        "question": "Which command is used to build a Docker image?",
+        "options": [
+            "docker run",
+            "docker build",
+            "docker create",
+            "docker start",
+        ],
+        "correct_answer": 1,
+        "time_limit": 15,
+        "max_points": 80,
+    },
+    {
+        "question": "What file is used to define a Docker image?",
+        "options": ["docker.json", "Dockerfile", "docker.yaml", "image.config"],
+        "correct_answer": 1,
+        "time_limit": 10,
+        "max_points": 60,
+    },
+    {
+        "question": "Which Docker command shows running containers?",
+        "options": [
+            "docker ps",
+            "docker list",
+            "docker show",
+            "docker containers",
+        ],
+        "correct_answer": 0,
+        "time_limit": 25,
+        "max_points": 90,
+    },
+    {
+        "question": "What does the -d flag do in 'docker run -d'?",
+        "options": [
+            "Deletes the container after running",
+            "Downloads the image first",
+            "Runs the container in detached mode",
+            "Enables debugging mode",
+        ],
+        "correct_answer": 2,
+        "time_limit": 30,
+        "max_points": 120,
+    },
+    {
+        "question": "What is the difference between a Docker image and a container?",
+        "options": [
+            "An image is running, a container is not",
+            "A container is a template, an image is an instance",
+            "An image is a blueprint, a container is a running instance",
+            "They are exactly the same",
+        ],
+        "correct_answer": 2,
+        "time_limit": 20,
+        "max_points": 100,
+    },
+    {
+        "question": "What is Docker Compose primarily used for?",
+        "options": [
+            "Deploying apps to Kubernetes",
+            "Managing multiple containers via a single YAML file",
+            "Optimizing container performance",
+            "Building Docker images in parallel",
+        ],
+        "correct_answer": 1,
+        "time_limit": 25,
+        "max_points": 90,
+    },
+    {
+        "question": "What is the default network driver used by Docker?",
+        "options": ["host", "bridge", "overlay", "none"],
+        "correct_answer": 1,
+        "time_limit": 15,
+        "max_points": 70,
+    },
+    {
+        "question": "In Docker, how can you reduce rebuild time when modifying a Dockerfile?",
+        "options": [
+            "By placing changing lines like COPY at the top",
+            "By using ADD instead of COPY",
+            "By minimizing layers and ordering static instructions first",
+            "By writing all instructions in a shell script",
+        ],
+        "correct_answer": 2,
+        "time_limit": 25,
+        "max_points": 90,
+    },
+    {
+        "question": "Why are Docker volumes used?",
+        "options": [
+            "To expose ports",
+            "To persist data across container restarts",
+            "To improve build speed",
+            "To compile code faster",
+        ],
+        "correct_answer": 1,
+        "time_limit": 20,
+        "max_points": 85,
+    },
+    {
+        "question": "What happens when you run 'docker pull nginx'?",
+        "options": [
+            "It builds the image locally",
+            "It pulls nginx from GitHub",
+            "It downloads the image from Docker Hub registry",
+            "It installs nginx in your system",
+        ],
+        "correct_answer": 2,
+        "time_limit": 15,
+        "max_points": 70,
+    },
+    {
+        "question": "Which command is used to start services defined in docker-compose.yml?",
+        "options": [
+            "docker-compose build",
+            "docker-compose init",
+            "docker-compose run",
+            "docker-compose up",
+        ],
+        "correct_answer": 3,
+        "time_limit": 20,
+        "max_points": 100,
+    },
+    {
+        "question": "Which command stops all services started by Docker Compose?",
+        "options": [
+            "docker-compose kill",
+            "docker-compose down",
+            "docker-compose remove",
+            "docker-compose pause",
+        ],
+        "correct_answer": 1,
+        "time_limit": 20,
+        "max_points": 90,
+    },
+    {
+        "question": "How do you rebuild images and recreate all containers using Docker Compose?",
+        "options": [
+            "docker-compose up --build",
+            "docker-compose restart",
+            "docker-compose reset",
+            "docker-compose build --force",
+        ],
+        "correct_answer": 0,
+        "time_limit": 20,
+        "max_points": 100,
+    },
+    {
+        "question": "Which keyword in Docker Compose is used to persist data between container restarts?",
+        "options": ["storage", "mount", "volumes", "binds"],
+        "correct_answer": 2,
+        "time_limit": 25,
+        "max_points": 90,
+    },
+    {
+        "question": "In Docker Compose, what does 'ports: - \"8080:80\"' mean?",
+        "options": [
+            "Map container port 8080 to host port 80",
+            "Map host port 8080 to container port 80",
+            "Expose port 80 for all containers",
+            "Create a new virtual network on port 8080",
+        ],
+        "correct_answer": 1,
+        "time_limit": 20,
+        "max_points": 95,
+    },
+]
+
+
 class QuestionService:
     def __init__(self):
         self.collection_name = "questions"
