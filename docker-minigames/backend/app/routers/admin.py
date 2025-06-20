@@ -17,6 +17,37 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+@router.get("/questions/count", response_model=dict, dependencies=[AdminRequired])
+async def get_questions_count():
+    """Get total count of questions (Admin only)"""
+    try:
+        # Check cache first
+        cache_key = "admin_questions_count"
+        cached_count = await cache_service.get(cache_key)
+
+        if cached_count is not None:
+            return {"total_questions": cached_count}
+
+        db = get_database()
+        questions_collection = db.questions
+
+        total_count = await questions_collection.count_documents({})
+
+        # Cache the result
+        await cache_service.set(
+            cache_key, total_count, ttl=settings.QUESTIONS_CACHE_TTL
+        )
+
+        return {"total_questions": total_count}
+
+    except Exception as e:
+        logger.error(f"❌ Error counting questions: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while counting questions",
+        )
+
+
 @router.post("/questions", response_model=dict, dependencies=[AdminRequired])
 async def create_question(question: Question):
     """Create a new question (Admin only)"""
@@ -275,37 +306,6 @@ async def delete_question(question_id: str = Path(..., description="Question ID"
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error while deleting question",
-        )
-
-
-@router.get("/questions/count", response_model=dict, dependencies=[AdminRequired])
-async def get_questions_count():
-    """Get total count of questions (Admin only)"""
-    try:
-        # Check cache first
-        cache_key = "admin_questions_count"
-        cached_count = await cache_service.get(cache_key)
-
-        if cached_count is not None:
-            return {"total_questions": cached_count}
-
-        db = get_database()
-        questions_collection = db.questions
-
-        total_count = await questions_collection.count_documents({})
-
-        # Cache the result
-        await cache_service.set(
-            cache_key, total_count, ttl=settings.QUESTIONS_CACHE_TTL
-        )
-
-        return {"total_questions": total_count}
-
-    except Exception as e:
-        logger.error(f"❌ Error counting questions: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error while counting questions",
         )
 
 
