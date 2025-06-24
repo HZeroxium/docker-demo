@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## 🐳 Docker Commands
 
-## Getting Started
+### Build và Scan Image
+\`\`\`bash
+# Build image với multistage
+npm run docker:build
 
-First, run the development server:
+# Hoặc manual
+docker build -t portfolio:latest .
+trivy image portfolio:latest
+\`\`\`
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+### Chạy Containers
+\`\`\`bash
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# Production
+npm run docker:prod
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Manual start
+npm run docker:start
+\`\`\`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Debug Containers
+\`\`\`bash
+# Xem logs
+npm run docker:logs
+docker logs portfolio_app
+docker logs portfolio_postgres
 
-## Learn More
+# Debug info
+npm run docker:debug
 
-To learn more about Next.js, take a look at the following resources:
+# Inspect container
+docker inspect portfolio_app
+docker ps -a
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Execute commands
+docker exec -it portfolio_app /bin/sh
+docker exec -it portfolio_postgres psql -U portfolio_user -d portfolio
+\`\`\`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Data Management
+\`\`\`bash
+# Stop containers (giữ data)
+npm run docker:stop
 
-## Deploy on Vercel
+# Export data
+./scripts/docker-commands.sh export
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Clean up (xóa data)
+npm run docker:clean
+\`\`\`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Volume Management
+\`\`\`bash
+# List volumes
+docker volume ls
+
+# Inspect volume
+docker volume inspect postgres_data
+
+# Backup volume
+docker run --rm -v postgres_data:/data -v $(pwd):/backup alpine tar czf /backup/postgres_backup.tar.gz -C /data .
+\`\`\`
+
+## 🔍 Monitoring & Health Checks
+
+### Health Check Endpoint
+\`\`\`bash
+curl http://localhost:3000/api/health
+\`\`\`
+
+### Container Health
+\`\`\`bash
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+\`\`\`
+
+## 🛠 Troubleshooting
+
+### Common Issues
+\`\`\`bash
+# Port already in use
+sudo lsof -i :3000
+sudo lsof -i :5432
+
+# Container won't start
+docker logs portfolio_app
+docker inspect portfolio_app
+
+# Database connection issues
+docker exec -it portfolio_postgres psql -U portfolio_user -d portfolio
+\`\`\`
+
+### Performance Monitoring
+\`\`\`bash
+# Container stats
+docker stats
+
+# System usage
+docker system df
+docker system prune
