@@ -1,0 +1,100 @@
+services:
+  # Backend API (using pre-built image)
+  backend:
+    image: hzeroxium/docker-quiz-game-backend:latest
+    container_name: docker-quiz-backend-prod
+    restart: unless-stopped
+    environment:
+      # MongoDB connection configuration
+      - MONGODB_URL=${MONGODB_URL}
+      - DB_NAME=${DB_NAME:-docker_quiz_game}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      # Additional MongoDB settings
+      - MONGODB_TIMEOUT=${MONGODB_TIMEOUT:-15000}
+      - MONGODB_POOL_SIZE=${MONGODB_POOL_SIZE:-20}
+      # Redis configuration
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB:-0}
+      - REDIS_URL=${REDIS_URL}
+      # Cache configuration
+      - CACHE_TTL=${CACHE_TTL:-3600}
+      - QUESTIONS_CACHE_TTL=${QUESTIONS_CACHE_TTL:-7200}
+      # Admin configuration
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+      # Production optimizations
+      - WORKERS=${WORKERS:-2}
+      - MAX_CONNECTIONS=${MAX_CONNECTIONS:-100}
+      - KEEPALIVE_TIMEOUT=${KEEPALIVE_TIMEOUT:-65}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - quiz-network
+    profiles:
+      - cloud
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend Application (using pre-built image)
+  frontend:
+    image: hzeroxium/docker-quiz-game-frontend:latest
+    container_name: docker-quiz-frontend-prod
+    restart: unless-stopped
+    environment:
+      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:8000}
+      - REACT_APP_ENVIRONMENT=${ENVIRONMENT:-production}
+      # Nginx optimizations
+      - NGINX_WORKER_PROCESSES=auto
+      - NGINX_WORKER_CONNECTIONS=1024
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - quiz-network
+    profiles:
+      - cloud
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+        reservations:
+          memory: 32M
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+# Networks
+networks:
+  quiz-network:
+    driver: bridge
+    name: docker-quiz-network-prod
