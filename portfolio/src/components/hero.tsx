@@ -1,59 +1,93 @@
-// components/hero.tsx
-import { Button } from "@/components/ui/button"
-import { Github, Linkedin, Mail, Download } from 'lucide-react'
+import { Box, Container, Typography, Button, Avatar, Stack, IconButton } from "@mui/material"
+import { GitHub, LinkedIn, Email, Download } from "@mui/icons-material"
 import Link from "next/link"
 
 export function Hero() {
   return (
-    <section id="home" className="min-h-screen flex items-center justify-center pt-16">
-      <div className="container mx-auto px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <div className="w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold">
-              TN
-            </div>
-          </div>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        pt: 8,
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        color: "white",
+      }}
+    >
+      <Container maxWidth="lg">
+        <Box textAlign="center">
+          <Avatar
+            sx={{
+              width: 120,
+              height: 120,
+              mx: "auto",
+              mb: 4,
+              bgcolor: "primary.main",
+              fontSize: "3rem",
+              fontWeight: 700,
+            }}
+          >
+            TN
+          </Avatar>
 
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Hello, my name is {" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
-              Your Name
-            </span>
-          </h1>
+          <Typography variant="h1" gutterBottom>
+            Xin chào, tôi là{" "}
+            <Box component="span" sx={{ color: "secondary.light" }}>
+              Tên của bạn
+            </Box>
+          </Typography>
 
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <Typography variant="h5" sx={{ mb: 4, maxWidth: 600, mx: "auto", opacity: 0.9 }}>
             Full Stack Developer với niềm đam mê tạo ra những ứng dụng web hiện đại và trải nghiệm người dùng tuyệt vời
-          </p>
+          </Typography>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="lg" asChild>
-              <Link href="/projects">Xem dự án</Link>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="center" sx={{ mb: 6 }}>
+            <Button
+              variant="contained"
+              size="large"
+              component={Link}
+              href="/projects"
+              sx={{ bgcolor: "white", color: "primary.main", "&:hover": { bgcolor: "grey.100" } }}
+            >
+              Xem dự án
             </Button>
-            <Button variant="outline" size="lg">
-              <Download className="mr-2 h-4 w-4" />
+            <Button
+              variant="outlined"
+              size="large"
+              startIcon={<Download />}
+              sx={{ borderColor: "white", color: "white", "&:hover": { borderColor: "grey.300" } }}
+            >
               Tải CV
             </Button>
-          </div>
+          </Stack>
 
-          <div className="flex justify-center space-x-6">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="https://github.com" target="_blank">
-                <Github className="h-6 w-6" />
-              </Link>
-            </Button>
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="https://linkedin.com" target="_blank">
-                <Linkedin className="h-6 w-6" />
-              </Link>
-            </Button>
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="mailto:your.email@example.com">
-                <Mail className="h-6 w-6" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    </section>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <IconButton
+              component={Link}
+              href="https://github.com"
+              target="_blank"
+              sx={{ color: "white", "&:hover": { bgcolor: "rgba(255,255,255,0.1)" } }}
+            >
+              <GitHub />
+            </IconButton>
+            <IconButton
+              component={Link}
+              href="https://linkedin.com"
+              target="_blank"
+              sx={{ color: "white", "&:hover": { bgcolor: "rgba(255,255,255,0.1)" } }}
+            >
+              <LinkedIn />
+            </IconButton>
+            <IconButton
+              component={Link}
+              href="mailto:your.email@example.com"
+              sx={{ color: "white", "&:hover": { bgcolor: "rgba(255,255,255,0.1)" } }}
+            >
+              <Email />
+            </IconButton>
+          </Stack>
+        </Box>
+      </Container>
+    </Box>
   )
 }

@@ -1,64 +1,96 @@
-// components/header.tsx
 "use client"
 
 import { useState } from "react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Menu, X } from 'lucide-react'
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Box,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material"
+import { Menu as MenuIcon, Close as CloseIcon } from "@mui/icons-material"
 
 export function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"))
 
   const navItems = [
     { name: "Trang chủ", href: "/" },
     { name: "Dự án", href: "/projects" },
     { name: "Blog", href: "/blog" },
-    { name: "Liên hệ", href: "#contact" },
+    { name: "Liên hệ", href: "/contact" },
   ]
 
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen)
+  }
+
+  const drawer = (
+    <Box sx={{ width: 250 }}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", p: 1 }}>
+        <IconButton onClick={handleDrawerToggle}>
+          <CloseIcon />
+        </IconButton>
+      </Box>
+      <List>
+        {navItems.map((item) => (
+          <ListItem key={item.name} disablePadding>
+            <ListItemButton component={Link} href={item.href} onClick={handleDrawerToggle}>
+              <ListItemText primary={item.name} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+    </Box>
+  )
+
   return (
-    <header className="fixed top-0 w-full bg-background/80 backdrop-blur-sm border-b z-50">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-primary">
+    <>
+      <AppBar position="fixed" sx={{ bgcolor: "background.paper", backdropFilter: "blur(10px)" }} elevation={1}>
+        <Toolbar>
+          <Typography
+            variant="h6"
+            component={Link}
+            href="/"
+            sx={{
+              flexGrow: 1,
+              textDecoration: "none",
+              color: "primary.main",
+              fontWeight: 700,
+            }}
+          >
             Portfolio
-          </Link>
+          </Typography>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-muted-foreground hover:text-primary transition-colors"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
+          {isMobile ? (
+            <IconButton color="primary" onClick={handleDrawerToggle}>
+              <MenuIcon />
+            </IconButton>
+          ) : (
+            <Box sx={{ display: "flex", gap: 2 }}>
+              {navItems.map((item) => (
+                <Button key={item.name} component={Link} href={item.href} color="primary">
+                  {item.name}
+                </Button>
+              ))}
+            </Box>
+          )}
+        </Toolbar>
+      </AppBar>
 
-          {/* Mobile Menu Button */}
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
-        </div>
-
-        {/* Mobile Navigation */}
-        {isMenuOpen && (
-          <nav className="md:hidden mt-4 pb-4">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="block py-2 text-muted-foreground hover:text-primary transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        )}
-      </div>
-    </header>
+      <Drawer anchor="right" open={mobileOpen} onClose={handleDrawerToggle}>
+        {drawer}
+      </Drawer>
+    </>
   )
 }

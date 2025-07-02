@@ -17,6 +17,11 @@
     "docker:clean": "docker-compose down -v --rmi all"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.2.0",
+    "@mui/material": "^7.2.0",
+    "@mui/system": "^7.2.0",
     "@neondatabase/serverless": "^1.0.1",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-progress": "^1.1.7",

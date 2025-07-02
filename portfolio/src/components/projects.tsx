@@ -1,9 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ExternalLink, Github } from "lucide-react"
+import { Box, Container, Typography, Grid, Card, CardMedia, CardContent, CardActions, Chip, Stack, Button } from "@mui/material"
 import Link from "next/link"
-import Image from "next/image"
+import { Launch, GitHub } from "@mui/icons-material"
 
 export function Projects() {
   const projects = [
@@ -34,49 +31,59 @@ export function Projects() {
   ]
 
   return (
-    <section id="projects" className="py-20">
-      <div className="container mx-auto px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Dự án của tôi</h2>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {projects.map((project, index) => (
-              <Card key={index} className="overflow-hidden">
-                <div className="relative h-48">
-                  <Image src={project.image || "/placeholder.svg"} alt={project.title} fill className="object-cover" />
-                </div>
-                <CardHeader>
-                  <CardTitle>{project.title}</CardTitle>
-                  <CardDescription>{project.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {project.technologies.map((tech) => (
-                      <Badge key={tech} variant="secondary">
-                        {tech}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" asChild>
-                      <Link href={project.liveUrl} target="_blank">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Live Demo
-                      </Link>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={project.githubUrl} target="_blank">
-                        <Github className="mr-2 h-4 w-4" />
-                        Code
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
+    <Box component="section" id="projects" sx={{ py: 10 }}>
+      <Container maxWidth="lg">
+        <Typography variant="h2" align="center" gutterBottom>
+          Dự án của tôi
+        </Typography>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+          {projects.map((project) => (
+            <div key={project.title} style={{ flex: "1 1 calc(33.33% - 16px)" }}>
+              <Card sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+          <CardMedia
+            component="img"
+            height="200"
+            image={project.image}
+            alt={project.title}
+          />
+          <CardContent sx={{ flexGrow: 1 }}>
+            <Typography variant="h6">{project.title}</Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              {project.description}
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
+              {project.technologies.map((tech) => (
+                <Chip key={tech} label={tech} size="small" />
+              ))}
+            </Stack>
+          </CardContent>
+          <CardActions>
+            <Button
+              size="small"
+              startIcon={<Launch />}
+              component={Link}
+              href={project.liveUrl}
+              target="_blank"
+            >
+              Live Demo
+            </Button>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<GitHub />}
+              component={Link}
+              href={project.githubUrl}
+              target="_blank"
+            >
+              Code
+            </Button>
+          </CardActions>
               </Card>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      </div>
-    </section>
+      
+      </Container>
+    </Box>
   )
 }

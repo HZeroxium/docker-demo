@@ -1,82 +1,92 @@
-// src/components/contact.tsx
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Mail, Phone, MapPin, Send } from 'lucide-react'
-import { submitContactForm } from "@/app/actions"  // ✅ Import từ app/actions
+import { Box, Container, Typography, Grid, Card, CardContent, TextField, Button, Stack, Alert } from "@mui/material"
+import { Email, Phone, LocationOn, Send } from "@mui/icons-material"
+import { submitContactForm } from "@/app/actions"
 import { useActionState } from "react"
 
 export function Contact() {
-  const [state, action, isPending] = useActionState(submitContactForm, null)
+  const submitContact = (_state: { success: boolean; message: string; } | null, formData: FormData) => submitContactForm(formData);
+  const [state, action, isPending] = useActionState(submitContact, null)
 
   return (
-    <section id="contact" className="py-20">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Liên hệ với tôi</h2>
+    <Box sx={{ py: 10 }}>
+      <Container maxWidth="lg">
+        <Typography variant="h2" textAlign="center" gutterBottom>
+          Liên hệ với tôi
+        </Typography>
 
-          <div className="grid md:grid-cols-2 gap-12">
-            <div>
-              <h3 className="text-2xl font-semibold mb-6">Hãy kết nối với tôi</h3>
-              <p className="text-muted-foreground mb-8">
-                Tôi luôn sẵn sàng thảo luận về các dự án mới, cơ hội hợp tác hoặc đơn giản chỉ là trò chuyện về công nghệ.
-              </p>
-
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-5 w-5 text-primary" />
-                  <span>your.email@example.com</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-5 w-5 text-primary" />
-                  <span>+84 123 456 789</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <span>Hồ Chí Minh, Việt Nam</span>
-                </div>
-              </div>
+        <Grid container spacing={6}>
+            <div style={{ width: "100%", maxWidth: "50%", padding: "16px" }}>
+            <Typography variant="h5" gutterBottom>
+              Hãy kết nối với tôi
+            </Typography>
+            <Typography variant="body1" paragraph style={{ marginBottom: "16px" }}>
+              Tôi luôn sẵn sàng thảo luận về các dự án mới, cơ hội hợp tác hoặc đơn giản chỉ là trò chuyện về công nghệ.
+            </Typography>
+        
+            <Stack spacing={3}>
+              <Stack direction="row" spacing={2} alignItems="center">
+              <Email color="primary" />
+              <Typography>your.email@example.com</Typography>
+              </Stack>
+              <Stack direction="row" spacing={2} alignItems="center">
+              <Phone color="primary" />
+              <Typography>+84 123 456 789</Typography>
+              </Stack>
+              <Stack direction="row" spacing={2} alignItems="center">
+              <LocationOn color="primary" />
+              <Typography>Hồ Chí Minh, Việt Nam</Typography>
+              </Stack>
+            </Stack>
             </div>
 
+          <div style={{ width: "100%", maxWidth: "50%", padding: "16px" }}>
             <Card>
-              <CardHeader>
-                <CardTitle>Gửi tin nhắn</CardTitle>
-                <CardDescription>Điền thông tin bên dưới và tôi sẽ phản hồi sớm nhất có thể</CardDescription>
-              </CardHeader>
               <CardContent>
-                <form action={action} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Họ tên</Label>
-                    <Input id="name" name="name" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="message">Tin nhắn</Label>
-                    <Textarea id="message" name="message" rows={4} required />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isPending}>
-                    <Send className="mr-2 h-4 w-4" />
-                    {isPending ? "Đang gửi..." : "Gửi tin nhắn"}
-                  </Button>
-                </form>
+                <Typography variant="h6" gutterBottom>
+                  Gửi tin nhắn
+                </Typography>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  Điền thông tin bên dưới và tôi sẽ phản hồi sớm nhất có thể
+                </Typography>
+
+                <Box component="form" action={action}>
+                  <Stack spacing={3}>
+                    <TextField name="name" label="Họ tên" fullWidth required variant="outlined" />
+                    <TextField name="email" label="Email" type="email" fullWidth required variant="outlined" />
+                    <TextField
+                      name="message"
+                      label="Tin nhắn"
+                      multiline
+                      rows={4}
+                      fullWidth
+                      required
+                      variant="outlined"
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      size="large"
+                      startIcon={<Send />}
+                      disabled={isPending}
+                      fullWidth
+                    >
+                      {isPending ? "Đang gửi..." : "Gửi tin nhắn"}
+                    </Button>
+                  </Stack>
+                </Box>
 
                 {state && (
-                  <div className={`mt-4 text-center ${state.success ? "text-green-600" : "text-red-600"}`}>
+                  <Alert severity={state.success ? "success" : "error"} sx={{ mt: 2 }}>
                     {state.message}
-                  </div>
+                  </Alert>
                 )}
               </CardContent>
             </Card>
           </div>
-        </div>
-      </div>
-    </section>
+        </Grid>
+      </Container>
+    </Box>
   )
 }

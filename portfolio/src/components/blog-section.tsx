@@ -1,5 +1,5 @@
 import { BlogCard } from "./blog-card"
-import { Button } from "@/components/ui/button"
+import { Button } from "@mui/material"
 import Link from "next/link"
 import type { BlogPost } from "@/lib/types"
 
@@ -21,8 +21,8 @@ export function BlogSection({ posts }: BlogSectionProps) {
           </div>
 
           <div className="text-center">
-            <Button size="lg" asChild>
-              <Link href="/blog">Xem tất cả bài viết</Link>
+            <Button size="large" variant="contained" color="primary" component={Link} href="/blog">
+              Xem tất cả bài viết
             </Button>
           </div>
         </div>
