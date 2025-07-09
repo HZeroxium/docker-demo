@@ -4,6 +4,14 @@ FROM node:22-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Accept build arguments for environment configuration
+ARG VITE_BACKEND_URL
+ARG VITE_ENVIRONMENT=production
+
+# Set environment variables from build args
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+ENV VITE_ENVIRONMENT=${VITE_ENVIRONMENT}
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
@@ -25,6 +33,10 @@ RUN apk add --no-cache curl
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy runtime entrypoint script
+COPY entrypoint-runtime.sh /docker-entrypoint.d/
+RUN chmod +x /docker-entrypoint.d/entrypoint-runtime.sh
 
 # Copy nginx configuration with improved backend resolution
 RUN echo 'upstream backend_upstream { \

@@ -1,7 +1,36 @@
 import axios from "axios";
 import { type Player, type Question } from "../contexts/GameContext";
 
-const API_BASE_URL = "http://localhost:8000/api";
+// Runtime configuration fallback function
+const getRuntimeConfig = () => {
+  // Check for runtime configuration injected by Docker
+  if (typeof window !== "undefined" && (window as any).__RUNTIME_CONFIG__) {
+    return (window as any).__RUNTIME_CONFIG__;
+  }
+  return {};
+};
+
+// Get backend URL with runtime configuration support
+const getBackendUrl = (): string => {
+  const runtimeConfig = getRuntimeConfig();
+
+  // Priority: Runtime config > Build-time env > Default
+  return (
+    runtimeConfig.VITE_BACKEND_URL ||
+    import.meta.env.VITE_BACKEND_URL ||
+    "http://localhost:8000"
+  );
+};
+
+// Use environment variable or fallback to localhost for development
+const API_BASE_URL = `${getBackendUrl()}/api`;
+
+console.log("🔧 API Configuration:", {
+  backendUrl: getBackendUrl(),
+  apiBaseUrl: API_BASE_URL,
+  runtimeConfig: getRuntimeConfig(),
+  buildTimeEnv: import.meta.env.VITE_BACKEND_URL,
+});
 
 const api = axios.create({
   baseURL: API_BASE_URL,

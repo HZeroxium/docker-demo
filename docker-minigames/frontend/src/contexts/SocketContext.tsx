@@ -28,7 +28,36 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socketInstance = io("http://localhost:8000", {
+    // Runtime configuration fallback function
+    const getRuntimeConfig = () => {
+      // Check for runtime configuration injected by Docker
+      if (typeof window !== "undefined" && (window as any).__RUNTIME_CONFIG__) {
+        return (window as any).__RUNTIME_CONFIG__;
+      }
+      return {};
+    };
+
+    // Get backend URL with runtime configuration support
+    const getBackendUrl = (): string => {
+      const runtimeConfig = getRuntimeConfig();
+
+      // Priority: Runtime config > Build-time env > Default
+      return (
+        runtimeConfig.VITE_BACKEND_URL ||
+        import.meta.env.VITE_BACKEND_URL ||
+        "http://localhost:8000"
+      );
+    };
+
+    const backendUrl = getBackendUrl();
+
+    console.log("🔌 Socket Configuration:", {
+      backendUrl,
+      runtimeConfig: getRuntimeConfig(),
+      buildTimeEnv: import.meta.env.VITE_BACKEND_URL,
+    });
+
+    const socketInstance = io(backendUrl, {
       transports: ["websocket"],
     });
 

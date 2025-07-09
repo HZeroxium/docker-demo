@@ -59,8 +59,9 @@ services:
     container_name: docker-quiz-frontend-prod
     restart: unless-stopped
     environment:
-      - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:8000}
-      - REACT_APP_ENVIRONMENT=${ENVIRONMENT:-production}
+      # Frontend configuration for production
+      - VITE_BACKEND_URL=${VITE_BACKEND_URL}
+      - VITE_ENVIRONMENT=${ENVIRONMENT:-production}
       # Nginx optimizations
       - NGINX_WORKER_PROCESSES=auto
       - NGINX_WORKER_CONNECTIONS=1024
