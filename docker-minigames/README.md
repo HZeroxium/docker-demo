@@ -73,7 +73,7 @@ docker-compose --profile cloud up --build
 
 **Symptoms**:
 
-```
+```bash
 nginx: [emerg] host not found in upstream "backend" in /etc/nginx/conf.d/default.conf:1
 ```
 
@@ -111,9 +111,9 @@ MONGODB_URL=mongodb+srv://username:password@cluster.mongodb.net/database?retryWr
 
 ## Services
 
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **MongoDB**: localhost:27017 (local profiles only)
+- **Frontend**: <http://localhost:3000>
+- **Backend API**: <http://localhost:8000>
+- **MongoDB**: <http://localhost:27017> (local profiles only)
 
 ## Architecture Benefits
 
@@ -211,9 +211,9 @@ cp .env.dev .env && docker-compose --profile local-dev up
 
 ## 📊 Service Access
 
-- **Frontend**: http://localhost:3000
-- **Backend**: http://localhost:8000
-- **MongoDB** (local only): localhost:27017
+- **Frontend**: <http://localhost:3000>
+- **Backend**: <http://localhost:8000>
+- **MongoDB** (local only): <http://localhost:27017>
 
 ## 🏗️ Architecture Benefits
 

@@ -1,5 +1,5 @@
 services:
-  # MongoDB Container (only active when using local profile)
+  # MongoDB Container
   mongodb:
     image: mongo:latest
     container_name: docker-quiz-mongodb
@@ -25,7 +25,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # Redis Container (only active when using local profile)
+  # Redis Container
   redis:
     image: redis:7.4.2
     container_name: docker-quiz-redis
@@ -45,7 +45,7 @@ services:
       retries: 3
       start_period: 20s
 
-  # Backend API (works with both local and cloud MongoDB/Redis)
+  # Backend API
   backend:
     build:
       context: ./backend
@@ -85,7 +85,6 @@ services:
         required: false
     profiles:
       - local
-      - local-dev
       - cloud
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -119,7 +118,6 @@ services:
       - quiz-network
     profiles:
       - local
-      - local-dev
       - cloud
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]

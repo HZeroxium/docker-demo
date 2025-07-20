@@ -348,63 +348,7 @@ class QuestionService:
 
     async def seed_questions(self):
         """Seed initial questions for demo with timing data"""
-        sample_questions = [
-            {
-                "question": "What is Docker?",
-                "options": [
-                    "A programming language",
-                    "A containerization platform",
-                    "A database management system",
-                    "A web framework",
-                ],
-                "correct_answer": 1,
-                "time_limit": 20,
-                "max_points": 100,
-            },
-            {
-                "question": "Which command is used to build a Docker image?",
-                "options": [
-                    "docker run",
-                    "docker build",
-                    "docker create",
-                    "docker start",
-                ],
-                "correct_answer": 1,
-                "time_limit": 15,
-                "max_points": 80,
-            },
-            {
-                "question": "What file is used to define a Docker image?",
-                "options": ["docker.json", "Dockerfile", "docker.yaml", "image.config"],
-                "correct_answer": 1,
-                "time_limit": 10,
-                "max_points": 60,
-            },
-            {
-                "question": "Which Docker command shows running containers?",
-                "options": [
-                    "docker ps",
-                    "docker list",
-                    "docker show",
-                    "docker containers",
-                ],
-                "correct_answer": 0,
-                "time_limit": 25,
-                "max_points": 90,
-            },
-            {
-                "question": "What does the -d flag do in 'docker run -d'?",
-                "options": [
-                    "Deletes the container after running",
-                    "Downloads the image first",
-                    "Runs the container in detached mode",
-                    "Enables debugging mode",
-                ],
-                "correct_answer": 2,
-                "time_limit": 30,
-                "max_points": 120,
-            },
-        ]
+        sample_questions = SAMPLE_QUESTIONS
 
         try:
             # Check if questions already exist
